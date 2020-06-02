@@ -130,7 +130,7 @@
    
    # Prepare collection of results
    # -----------------------------
-   Rsq <- MoransI <- MoransI.w <- Fst.total <- Fst.sample <- rep(NA, nrow(Design))
+   NumLoci <- Rsq <- MoransI <- MoransI.w <- Fst.total <- Fst.sample <- rep(NA, nrow(Design))
 
    
    # Loop through simulated datasets:
@@ -148,7 +148,7 @@
      Site <- rep(1:Design$NumPops[i],each=as.numeric(as.vector(Design$NumInd)[i]))
      
      # Each file has NumPops x NumInd rows (sampled individuals) and 9996 columns (loci:)
-     tmp <- read.table(paste0(here::here(),"/SimFilesLFMM/", Filenames.lfmm[[i]]))
+     tmp <- read.table(paste0(here::here(),"/dryad/SimFilesLFMM/", Filenames.lfmm[[i]]))
      dim(tmp)
      NumLoci[i] <- ncol(tmp) 
      
