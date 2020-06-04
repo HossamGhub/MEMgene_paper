@@ -341,7 +341,7 @@ Results are stored in a list (one element per site j with 90 samples) with these
   - Range: range (minimum and maximum) of Moran's I of MEM vectors (limits for Moran's I of genetic data)
 
   
-## 3. Analyse results for n - 90
+## 3. Analyse results for n = 90
 
 ### a) Compile results
 
@@ -401,11 +401,12 @@ Notes:
 
 ### b) Create plots
 
-PLEASE ADD CODE!
+See below.
+
 
 ### c) Statistical analysis
 
-PLEASE ADD CODE!
+See below.
 
 
 ## 4. Get results for subsets with 30 pops
@@ -452,7 +453,7 @@ saveRDS(Results.R.30, paste0(here::here(), "/output/Results.R.30.rds"))
 ```
 
 
-## 5. Analyse results for subsets with n = 30
+## 5. Analyse results for n = 30
 
 ### a) Compile results
 
@@ -619,11 +620,8 @@ par(mfrow=c(1,1))
 - The correction by Cheng (2013): `I' = I * (n-1)/n)` makes the differences between sample sizes larger, not smaller.
 - Same patterns for Fst and Dch.
 
-PLEASE ADD CODE!
 
 ### c) Statistical analysis
-
-PLEASE ADD CODE!
 
 Paired t-tests for difference between mean of subsamples with n = 30 and corresponding datasets with n = 90 sites.
 
@@ -644,7 +642,7 @@ with(Results.subsets.table, t.test(Fst.I.scaled.30.m * 29/30,
                                          Fst.I.scaled.90*89/90, paired=TRUE))
 ```
 
-Effect sizes: this is interesting!
+Effect sizes (Cohen's d for paired t-test): this is interesting!
 
 **Interpretation:**
 
@@ -667,7 +665,7 @@ with(Results.subsets.table, mean(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/
        sd(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90))
 ```
 
-Drop IM model:
+Drop IM model: effect size (Cohen's d for paired t-test)
 
 **Interpretation:**
 
