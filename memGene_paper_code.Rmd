@@ -1,0 +1,718 @@
+---
+title: "MEMgene paper analysis"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+---
+
+Analysis of simulated datasets from Lotterhos & Whitlock with the same random sampling of 90 sites as in Wagner et al. (2017).
+
+Goal:
+
+Design:
+
+Genetic data:
+
+Response variables:
+
+
+## 1. Preparations
+
+### a) Packages
+
+```{r packages}
+library(adegenet)
+library(hierfstat)
+#library(spdep)
+#library(adespatial)
+library(memgene)
+library(here)
+library(parallel)
+```
+
+### b) Import patial coordinates
+
+```{r coords}
+Coords <- list()
+Coords$Pairs <- list()
+# Coords$Pairs$E453 <- read.table("1351142954_453EnviMatPAIRS_ED.txt")
+# Coords$Pairs$E988 <- read.table("1351142970_988EnviMatPAIRS_ED.txt")
+# Coords$Pairs$E950 <- read.table("1351142986_950EnviMatPAIRS_ED.txt")
+Coords$Transect <- list()
+# Coords$Transect$E453 <- read.table("1351142954_453EnviMatTRANSECTS_ED_Design.txt")
+# Coords$Transect$E988 <- read.table("1351142970_988EnviMatTRANSECTS_ED_Design.txt")
+# Coords$Transect$E950 <- read.table("1351142986_950EnviMatTRANSECTS_ED_Design.txt")
+Coords$Random <- list()
+Coords$Random$E453 <- Coords$Random$E988 <- Coords$Random$E950 <- 
+  read.table("SchemeRandom1.txt") # upload this file
+
+# for(k in 1:length(Coords$Transect))
+# {
+#   names(Coords$Transect[[k]])[2:3] <- names(Coords$Pairs[[1]])[2:3]
+#   Coords$Transect[[k]][,7:9][is.na(Coords$Transect[[k]][,7:9])] <- FALSE
+# }
+for(i in 1:length(Coords))
+{
+  if(length(Coords[[i]]) > 0)
+  {
+    for(k in 1:length(Coords[[i]]))
+    {
+      b <- order(Coords[[i]][[k]][,3], Coords[[i]][[k]][,2]) # Sort by y, then x
+      Coords[[i]][[k]] <- Coords[[i]][[k]][b,]  # correct order!!
+    }
+  }
+  
+}
+```
+
+### c) Parameter space
+
+Genetic data: find all file names in the folder "SimFilesLFMM" that contain 'lfmm':
+
+```{r files}
+Filenames.lfmm <- list.files(paste0(here::here(), "/dryad//SimFilesLFMM/"), pattern="lfmm") 
+
+test <- Reduce(rbind, strsplit(Filenames.lfmm, split="[_=]"))
+test <- cbind(test, Reduce(rbind, strsplit(test[,ncol(test)], split="[.]")))
+tmp <- strsplit(test[,2], split="[.xs]")
+test2 <- matrix(NA, nrow(test), 3)
+for(i in 1:nrow(test)) test2[i,1:length(tmp[[i]])] <- tmp[[i]]
+test2 <- gsub("[A-Z, a-z]","", test2)
+test <- cbind(test, test2)
+dimnames(test) <- list(NULL, c("Demography", "Design", "ID", "Env", "ID2", 
+                               "V6", "NumPops", "V8", "V9", "NumInd", "Design2",
+                               "NumPops2", "NumTrans", "NumInd2"))
+```
+
+Design matrix (parameter space): each row is one combination of parameter settings:
+
+- Demography: single refugium (1R), two refugia (2R), isolation by distane (IBD), island model (IM)
+- Design: sampling design (R, P, T; see below) and number of pops sampled
+- Env: which of the three replicate landscapes '453', '950', '988'
+- NumPops: how many populations are sampled
+- NumInd: how many individuals sampled per pop
+- Type: random (R), pairs (P), transects (T)
+
+```{r Design}   
+   Design <- as.data.frame(test[,c(1,2,4,7,10,13,14)])
+   Design$Env <- ordered(Design$Env, levels=c(453,988,950))
+   Design$Type <- ordered(substr(Design$Design, 1, 1), levels=c("P", "T", "R"))
+   Design$Design <- as.character(Design$Design)
+   Design$Design[Design$Design == "T30.T3x10"] <- "T30.3x10s"
+   Design$Design[Design$Design == "T30.T6x5s"] <- "T30.6x5s"
+   Design$NumPops <- as.numeric(as.character(Design$NumPops))
+   head(Design)
+```
+
+## 2. Genetic data
+
+### a) Select datasets
+
+Select all data files with the largest sample size (90) and random sampling (R)
+
+```{r}
+Sites.R.90 <- c(1:nrow(Design))[Design$NumPops==90 & Design$Type=="R"] 
+```
+
+Check parameters for selected datasets:
+
+```{r}
+Design[Sites.R.90,]
+```
+
+### b) Run function 'getGenData' to extract the genetic data
+
+This function extracts the genetic data, selects the 9900 neutral loci, and adds a first column 'pop' with site as a factor. This is the format for functions in the package `hierfstat`.
+
+Define function:
+
+```{r getGenData}
+getGenData <- function(j)
+{
+  # Select the sites that need to be sampled for this run:
+  i=Sites.R.90[j]
+  cat("j:", j, ", i:", i, "\n")
+  
+  # Each file has NumPops x NumInd rows (sampled individuals) and up to 10000 columns (loci)
+  tmp <- read.table(paste0(here::here(),"/dryad/SimFilesLFMM/", Filenames.lfmm[[i]]))
+  
+  # Drop non-neutral loci
+  tmp <- tmp[,1:9900]
+    
+  # Site: create vector of sites = pops (for each row = individual)
+  Site <- rep(1:Design$NumPops[i],each=as.numeric(as.vector(Design$NumInd)[i]))
+  
+  Data.hierfstat <- data.frame(pop=factor(Site), tmp)
+  
+  return(Data.hierfstat)
+}
+```
+
+Run in parallel and save results:
+
+```{r GenData90}
+start_time <- Sys.time()
+
+Index.j <- 1:length(Sites.R.90)
+
+Data.R.90 <- mclapply(Index.j, function(j) getGenData(j),
+                 mc.cores=detectCores())
+names(Data.R.90) <- Sites.R.90
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Data.R.90, paste0(here::here(), "/output/Data.R.90.rds"))
+```
+
+Results are stored in a list (one element per site j with 90 samples), with each element:
+
+- Data.frame with first column "pop" (factor of site IDs) and 9900 columns of neutral loci
+    
+### c) Run function 'getDgen' to calculate sample Fst and genetic distances
+
+Define function:
+
+```{r getDgen}
+getDgen <- function(j, Data=Data.R.90, dist.method = c("Fst", "Dch"))
+{
+  Fst <- basic.stats(Data[[j]])$overall
+  
+  D <- list()
+  for(k in 1:length(dist.method))
+  {
+    D[[k]] <- genet.dist(Data[[j]] , method = dist.method[k])
+  }
+  names(D) <- dist.method
+  
+  return(list(Fst.sample=Fst, Dgen=D))
+}
+```
+
+Run in parallel and save results: (this takes a longer time: 10.4 min on Helene's iMac)
+
+```{r Dgen90}
+start_time <- Sys.time()
+
+Index.j <- 1:length(Sites.R.90)
+
+Dgen.R.90 <- mclapply(Index.j, function(j) getDgen(j, Data=Data.R.90, 
+                                                 dist.method=c("Fst", "Dch")),
+                 mc.cores=detectCores())
+names(Dgen.R.90) <- Sites.R.90
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Dgen.R.90, paste0(here::here(), "/output/Dgen.R.90.rds"))
+```
+
+Results are stored in a list (one element per site j with 90 samples) with these elements:
+
+- Fst.sample: 'overall' statistics returned by `basic.stats` function
+- Dgen: list of pairwise genetic distance matrices
+    - Fst (Fst)
+    - Cavalli-Sforza and Edwards Chord distance (Dch)
+
+### d) Run function 'getMEMgene' to obtain RsqAdj and Moran's I
+
+This function extracts the grid coordinates, performs memgene analysis with forward selection to obtain the adjusted Rsquare. It also calculates the raw (unadjusted) Rsquare, then calculates Moran's I for the genetic data by obtaining a scalogram S (Rsquare for each MEM vector, which sum to 1 across all MEM vectors) and multiplying with the rescaled MEM eigenvectors (Moran's I for each vector). It also returns the limits for Moran's I of the genetic data (min and max of Moran's I values of MEM vectors).
+
+Define function:
+
+```{r getMEMgene}
+getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL)
+{
+  i=Sites.R.90[j]
+  cat("j:", j, ", i:", i, "\n")
+  
+  # Extract the grid coordinates of the sampled sites
+  coord <- data.matrix(Coords[[as.numeric(Design$Type[i])]]
+                     [[as.numeric(Design$Env[i])]][,2:3])
+  if(length(subset) > 0)
+  {
+     coord <- coord[subset,]
+  }
+  
+  Res <- list()
+  for(k in 1: length(Dgen[[j]]$Dgen))
+  {
+    
+    Y <- as.matrix(Dgen[[j]]$Dgen[[k]])
+    
+    if(length(subset) > 0)
+    {
+       Y <- Y[subset, subset]
+    }
+    
+    # memGene
+    
+    MEM <- mgMEM(dist(coord))
+
+    Positive <- mgForward(Y, MEM$vectorsMEM[ , MEM$valuesMEM > 0])
+    Negative <- mgForward(Y,MEM$vectorsMEM[ , MEM$valuesMEM < 0])
+    allSelected <- cbind(MEM$vectorsMEM[, MEM$valuesMEM > 0][,na.omit(Positive$selectedMEM)],
+                     MEM$vectorsMEM[, MEM$valuesMEM < 0][,na.omit(Negative$selectedMEM)])
+    RsqAdj = Rsq = 0
+    if(ncol(allSelected) > 0)
+    {
+      MEM$analysis <- mgRDA(Y, allSelected, full=TRUE)
+      RsqAdj <- MEM$analysis$RsqAd
+      Rsq <- sum(diag(MEM$analysis$pred)) / (sum(diag(MEM$analysis$pred)) +
+                                             sum(diag(MEM$analysis$resid)))
+    } 
+    
+
+    # Centre distance matrix
+    n <- nrow(Y)
+    row.wt = rep(1, nrow(Y))
+    col.wt = rep(1, ncol(Y))
+    st <- sum(col.wt)
+    sr <- sum(row.wt)
+    row.wt <- row.wt/sr
+    col.wt <- col.wt/st
+    Y <- -0.5 * (Y * Y)
+    row.mean <- apply(row.wt * Y, 2, sum)
+    col.mean <- apply(col.wt * t(Y), 2, sum)
+    col.mean <- col.mean - sum(row.mean * col.wt)
+    Y <- sweep(Y, 2, row.mean)
+    G <- t(sweep(t(Y), 2, col.mean))
+    
+    # Get Rsq for each MEM vector from a separate dbRDA for each vector m
+    X <- MEM$vectorsMEM
+  
+    S <- rep(0, ncol(X))
+    for(m in 1:ncol(X))
+    {
+      if(var(X[,m]) > 0)
+      {
+        p = 1
+        H <- X[,m] %*% solve(t(X[,m]) %*% X[,m]) %*% t(X[,m])
+        I <- diag(n)
+        res <- (I - H) %*% G %*% (I - H)
+        S[m] <- 1 - sum(diag(res))/sum(diag(G))
+      }
+    }
+      
+    # Get Moran's I
+    Values <- MEM$valuesMEM / abs(sum(MEM$valuesMEM))
+    Range <- range(Values)
+    Morans.I <- as.vector(S %*% Values)
+    
+    Res[[k]] <- list(RsqAdj=RsqAdj, Rsq=Rsq, Morans.I=Morans.I, Range=Range)
+  }
+  names(Res) <- names(Dgen[[1]]$Dgen)
+  
+  return(Res)
+}
+```
+
+Run function in parallel:
+
+```{r MEMgene90}
+start_time <- Sys.time() 
+
+Index.j <- 1:length(Sites.R.90)
+
+Results.R.90 <- mclapply(Index.j, function(j) getMEMgene(j, Dgen = Dgen.R.90, subset=NULL),
+                    mc.cores=detectCores())
+names(Results.R.90) <- Sites.R.90
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Results.R.90, paste0(here::here(), "/output/Results.R.90.rds"))
+```
+
+Results are stored in a list (one element per site j with 90 samples) with these elements:
+
+- List with one element per genetic distance measure:
+  - RsqAdj: adjusted Rsquare from default analysis with memgene
+  - Rsq: unadjusted Rsquare from default analysis with memgene
+  - Morans.I: Moran's I for the genetic data
+  - Range: range (minimum and maximum) of Moran's I of MEM vectors (limits for Moran's I of genetic data)
+
+  
+## 3. Analyse results for n = 90
+
+### a) Compile results
+
+Import results without overwriting:
+
+```{r}
+Results <- readRDS(paste0(here::here(), "/output/Results.R.90.rds"))
+```
+
+Function to extract response variables
+
+```{r}
+getRes <- function(Results=Results, k = 1)
+{
+  RsqAdj.90 = sapply(Results, function(ls) ls[[k]]$RsqAdj)
+  Rsq.90 = sapply(Results, function(ls) ls[[k]]$Rsq)
+  Morans.I.90 = sapply(Results, function(ls) ls[[k]]$Morans.I)
+  I.max.90 = sapply(Results, function(ls) max(ls[[k]]$Range))
+  I.scaled.90 = Morans.I.90 / I.max.90
+  res <- data.frame(RsqAdj.90=RsqAdj.90, Rsq.90=Rsq.90, Morans.I.90=Morans.I.90, 
+                    I.max.90=I.max.90, I.scaled.90=I.scaled.90)
+}
+```
+
+Combine response variables with Design matrix
+
+```{r}
+res <- lapply(c(1:length(Results[[1]])), function(k) getRes(Results, k))
+names(res) <- names(Results[[1]])
+
+res.combined <- Reduce(cbind, res)
+names(res.combined) <- paste(rep(names(Results[[1]]), each=ncol(res[[1]])), 
+                             names(res[[1]]), sep=".")
+
+Results.table <- data.frame(Design[Sites.R.90,], res.combined)
+saveRDS(Results.table, paste0(here::here(), "/output/Results.table.rds"))
+Results.table
+```
+
+
+Analyze according to the following factors:
+
+- Demography (1R, 2R, IBD, IM)
+- NumInd: 20, 6
+- Genetic distance measure (Fst, Dch)
+
+Response variables:
+
+- RsqAdj: as in memgene output
+- Rsq: unadjusted (not reported in memgene)
+- Morans.I: assuming population is sampled. Correct with (n-1)/n (where n = 90) for estimating population Moran's I
+- Morans.I.rescaled: this is experimental. Divide Morans.I by the maximum value (max(Range)).
+
+Notes:
+
+- Env: for each combination, there are three replicate datasets (Env: 453, 988, 950). Env could be used as a blocking variable.
+
+### b) Create plots
+
+See below.
+
+
+### c) Statistical analysis
+
+See below.
+
+
+## 4. Get results for subsets with 30 pops
+
+This can probably be done quickly by subsetting the genetic distance matrices. 
+
+What subsets do we want to use? We could use several (e.g. R = 10) random subsets of 30 sites, but the same subset for all datasets in Sites.R.90.
+
+### a) Create R replicate random samples of n = 30 sites
+
+```{r subsets}
+R = 10
+Sites.30 <- list()
+for(r in 1:R)
+{
+  Sites.30[[r]] <- sort(sample(1:90, 30, replace=FALSE))
+}
+
+saveRDS(Sites.30, paste0(here::here(), "/output/Sites.30.rds"))
+```
+
+### b) Get results for subsets with n = 30 sites
+
+```{r MEMgene30}
+start_time <- Sys.time()
+
+Index.j <- 1:length(Sites.R.90)
+R = length(Sites.30)
+Results.R.30 <- rep( list(list()), R)
+
+for(r in 1:R)
+{
+  Results.R.30[[r]] <- mclapply(Index.j, function(j) getMEMgene(j, Dgen = Dgen.R.90,
+                                                       subset=Sites.30[[r]]),
+                                mc.cores=detectCores())
+  names(Results.R.30[[r]]) <- Sites.R.90
+}
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Results.R.30, paste0(here::here(), "/output/Results.R.30.rds"))
+```
+
+
+## 5. Analyse results for n = 30
+
+### a) Compile results
+
+Determine mean and sdev among the R = 10 replicate subsets for each datasest with 90 pops.
+
+Import results without overwriting:
+
+```{r}
+Results.subsets <- readRDS(paste0(here::here(), "/output/Results.R.30.rds"))
+```
+
+Combine mean and sdev of response variables with Design matrix:
+
+Note: dropped Rsq due to errors when knitting.
+
+```{r}
+res.r <- lapply(Results.subsets, function(sub) 
+  lapply(c(1:length(Results.subsets[[1]][[1]])), function(k) getRes(sub, k)))
+
+tmp <- list()
+for(k in 1:length(res.r[[1]]))
+  {
+    RsqAdj.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$RsqAdj), 1, mean)
+    RsqAdj.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$RsqAdj), 1, sd)
+    #Rsq.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$Rsq), 1, mean)
+    #Rsq.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$Rsq), 1, sd)
+    Morans.I.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, mean)
+    Morans.I.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, sd)
+    I.scaled.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I) / 
+      sapply(res.r, function(sub) sub[[k]]$I.max), 1, mean)
+    I.scaled.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I) / 
+      sapply(res.r, function(sub) sub[[k]]$I.max), 1, sd)
+    tmp[[k]] <- data.frame(RsqAdj.30.m=RsqAdj.30.m, RsqAdj.30.s=RsqAdj.30.s, 
+                           Morans.I.30.m=Morans.I.30.m, Morans.I.30.s=Morans.I.30.s,
+                           I.scaled.30.m=I.scaled.30.m, I.scaled.30.s=I.scaled.30.s)
+}
+
+res.r.combined <- Reduce(cbind, tmp)
+names(res.r.combined) <- paste(rep(names(Results.subsets[[1]][[1]]), each=ncol(tmp[[1]])), 
+                             names(tmp[[1]]), sep=".")
+
+
+Results.subsets.table <- data.frame(Results.table, res.r.combined)
+saveRDS(Results.subsets.table, paste0(here::here(), "/output/Results.subsets.table.rds"))
+Results.subsets.table
+```
+
+Get maximum possible Moran's I for each subsample (same for all 90 datasets):
+
+```{r}
+I.max.30 <- sapply(Results.subsets, function(sub) max(sub[[1]][[1]]$Range))
+I.max.30
+```
+
+
+### b) Create plots
+
+For datasets with n = 90 sites
+
+Effect of Demography:
+
+```{r fig.height=5, fig.width=8}
+par(mfrow=c(2,3))
+with(Results.subsets.table, boxplot(Fst.RsqAdj.90 ~ Demography,
+     main="Fst.Rsq.Adj"))
+with(Results.subsets.table, boxplot(Fst.Morans.I.90 ~ Demography,
+     main="Fst.Morans.I"))
+with(Results.subsets.table, boxplot(Fst.I.scaled.90 ~ Demography,
+     main="Fst.I.scaled"))
+
+
+with(Results.subsets.table, boxplot(Dch.RsqAdj.90 ~ Demography,
+     main="Dch.Rsq.Adj"))
+with(Results.subsets.table, boxplot(Dch.Morans.I.90 ~ Demography,
+     main="Dch.Morans.I"))
+with(Results.subsets.table, boxplot(Dch.I.scaled.90 ~ Demography,
+     main="Dch.I.scaled"))
+par(mfrow=c(1,1))
+```
+**Interpretation:**
+
+- As expected, island model (IM) does not show spatial structure.
+- Differences between 1R and 2R larger for Moran's I than RsqAdj.
+- Note: all datasets with n = 90 have the same samplign design and thus the same maximum value for Moran's I of the genetic data, hence rescaling does not change the pattern, only the absolute values.
+- Same patterns for Fst and Dch.
+
+
+Effect of the number of individuals sampled:
+
+```{r fig.height=5, fig.width=8}
+Results.subsets.table$NumInd <- factor(as.character(Results.subsets.table$NumInd))
+
+par(mfrow=c(2,3))
+with(Results.subsets.table, boxplot(Fst.RsqAdj.90 ~ NumInd,
+     main="Fst.Rsq.Adj"))
+with(Results.subsets.table, boxplot(Fst.Morans.I.90 ~ NumInd,
+     main="Fst.Morans.I"))
+with(Results.subsets.table, boxplot(Fst.I.scaled.90 ~ NumInd,
+     main="Fst.I.scaled"))
+
+
+with(Results.subsets.table, boxplot(Dch.RsqAdj.90 ~ NumInd,
+     main="Dch.Rsq.Adj"))
+with(Results.subsets.table, boxplot(Dch.Morans.I.90 ~ NumInd,
+     main="Dch.Morans.I"))
+with(Results.subsets.table, boxplot(Dch.I.scaled.90 ~ NumInd,
+     main="Dch.I.scaled"))
+par(mfrow=c(1,1))
+```
+**Interpretation:**
+
+- All measures are sensitive to the number of individuals sampled per population!
+- Same patterns for Fst and Dch.
+- Note as above: all datasets with n = 90 have the same samplign design and thus the same maximum value for Moran's I of the genetic data, hence rescaling does not change the pattern, only the absolute values.
+
+
+Compare n = 30 to n = 90
+
+```{r fig.height=5, fig.width=8}
+par(mfrow=c(2,3))
+with(Results.subsets.table, boxplot(list("30"=Fst.RsqAdj.30.m, "90"=Fst.RsqAdj.90),
+     main="Fst.Rsq.Adj"))
+with(Results.subsets.table, boxplot(list("30"=Fst.Morans.I.30.m, "90"=Fst.Morans.I.90),
+     main="Fst.Morans.I"))
+with(Results.subsets.table, boxplot(list("30"=Fst.I.scaled.30.m, "90"=Fst.I.scaled.90),
+     main="Fst.I.scaled"))
+with(Results.subsets.table, boxplot(list("30"=Dch.RsqAdj.30.m, "90"=Dch.RsqAdj.90),
+     main="Dch.Rsq.Adj"))
+with(Results.subsets.table, boxplot(list("30"=Dch.Morans.I.30.m, "90"=Dch.Morans.I.90),
+     main="Dch.Morans.I"))
+with(Results.subsets.table, boxplot(list("30"=Dch.I.scaled.30.m, "90"=Dch.I.scaled.90),
+     main="Dch.I.scaled"))
+par(mfrow=c(1,1))
+```
+**Interpretation:**
+
+- All measures are sensitive to the number of populations sampled!
+- Same patterns for Fst and Dch.
+- Rescaled Moran's I more comparable than original Moran's I.
+
+
+Account for sample size (Moran's I):
+
+Cheng 2013: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0068336
+
+```{r fig.height=7, fig.width=8}
+par(mfrow=c(2,2))
+with(Results.subsets.table, boxplot(list("30"=Fst.Morans.I.30.m * 29/30, 
+                                         "90"=Fst.Morans.I.90 *89/90),
+     main="Fst.Morans.I"))
+with(Results.subsets.table, boxplot(list("30"=Fst.I.scaled.30.m * 29/30,
+                                         "90"=Fst.I.scaled.90*89/90),
+     main="Fst.I.scaled"))
+with(Results.subsets.table, boxplot(list("30"=Dch.Morans.I.30.m * 29/30, 
+                                         "90"=Dch.Morans.I.90 *89/90),
+     main="Dch.Morans.I"))
+with(Results.subsets.table, boxplot(list("30"=Dch.I.scaled.30.m * 29/30,
+                                         "90"=Dch.I.scaled.90*89/90),
+     main="Dch.I.scaled"))
+par(mfrow=c(1,1))
+```
+**Interpretation:**
+
+- The correction by Cheng (2013): `I' = I * (n-1)/n)` makes the differences between sample sizes larger, not smaller.
+- Same patterns for Fst and Dch.
+
+
+### c) Statistical analysis
+
+Paired t-tests for difference between mean of subsamples with n = 30 and corresponding datasets with n = 90 sites.
+
+**Interpretation:**
+
+- All differences are highly significant.
+
+```{r}
+with(Results.subsets.table, t.test(Fst.RsqAdj.30.m, Fst.RsqAdj.90, paired=TRUE))
+
+with(Results.subsets.table, t.test(Fst.Morans.I.30.m, Fst.Morans.I.90, paired=TRUE))
+
+with(Results.subsets.table, t.test(Fst.I.scaled.30.m, Fst.I.scaled.90, paired=TRUE))
+
+with(Results.subsets.table, t.test(Fst.Morans.I.30.m * 29/30, 
+                                         Fst.Morans.I.90 *89/90, paired=TRUE))
+with(Results.subsets.table, t.test(Fst.I.scaled.30.m * 29/30,
+                                         Fst.I.scaled.90*89/90, paired=TRUE))
+```
+
+Effect sizes (Cohen's d for paired t-test): this is interesting!
+
+**Interpretation:**
+
+- Smallest effect size for RsqAdj (when all demographic scenarios are included)
+
+```{r}
+with(Results.subsets.table, mean(Fst.RsqAdj.30.m - Fst.RsqAdj.90)/ 
+       sd(Fst.RsqAdj.30.m - Fst.RsqAdj.90))
+
+with(Results.subsets.table, mean(Fst.Morans.I.30.m - Fst.Morans.I.90)/
+       sd(Fst.Morans.I.30.m - Fst.Morans.I.90)) 
+
+with(Results.subsets.table, mean(Fst.I.scaled.30.m - Fst.I.scaled.90)/
+       sd(Fst.I.scaled.30.m - Fst.I.scaled.90))
+
+with(Results.subsets.table, mean(Fst.Morans.I.30.m * 29/30 - Fst.Morans.I.90 *89/90) /
+       sd(Fst.Morans.I.30.m * 29/30 - Fst.Morans.I.90 *89/90))
+
+with(Results.subsets.table, mean(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90) /
+       sd(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90))
+```
+
+Drop IM model: effect size (Cohen's d for paired t-test)
+
+**Interpretation:**
+
+- Smallest effect size for I.scaled (when island model IM is excluded)
+
+```{r}
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",], 
+     mean(Fst.RsqAdj.30.m - Fst.RsqAdj.90)/ 
+       sd(Fst.RsqAdj.30.m - Fst.RsqAdj.90))
+
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",],
+     mean(Fst.Morans.I.30.m - Fst.Morans.I.90)/
+       sd(Fst.Morans.I.30.m - Fst.Morans.I.90)) 
+
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",],
+     mean(Fst.I.scaled.30.m - Fst.I.scaled.90)/
+       sd(Fst.I.scaled.30.m - Fst.I.scaled.90))
+
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",],
+     mean(Fst.Morans.I.30.m * 29/30 - Fst.Morans.I.90 *89/90) /
+       sd(Fst.Morans.I.30.m * 29/30 - Fst.Morans.I.90 *89/90))
+
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",],
+     mean(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90) /
+       sd(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90))
+```
+
+Repeat paired t-tests without IM model:
+
+**Interpretation:**
+
+- Still all effects highly significant.
+
+```{r}
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",], 
+     t.test(Fst.RsqAdj.30.m, Fst.RsqAdj.90, paired=TRUE))
+
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",], 
+     t.test(Fst.Morans.I.30.m, Fst.Morans.I.90, paired=TRUE))
+
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",], 
+     t.test(Fst.I.scaled.30.m, Fst.I.scaled.90, paired=TRUE))
+
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",], 
+     t.test(Fst.Morans.I.30.m * 29/30, 
+                                         Fst.Morans.I.90 *89/90, paired=TRUE))
+with(Results.subsets.table[Results.subsets.table$Demography != "IM",], 
+     t.test(Fst.I.scaled.30.m * 29/30,
+                                         Fst.I.scaled.90*89/90, paired=TRUE))
+```
