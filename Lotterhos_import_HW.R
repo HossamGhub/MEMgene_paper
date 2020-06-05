@@ -46,7 +46,7 @@
    # Coords$Transect$E950 <- read.table("1351142986_950EnviMatTRANSECTS_ED_Design.txt")
    Coords$Random <- list()
    Coords$Random$E453 <- Coords$Random$E988 <- Coords$Random$E950 <- 
-     read.table("SchemeRandom1.txt") # upload this file
+     read.table("SchemeRandom1.txt") 
    
    # for(k in 1:length(Coords$Transect))
    # {
@@ -162,7 +162,7 @@
      # Extract the grid coordinates of the sampled sites
      coord <- data.matrix(Coords[[as.numeric(Design$Type[i])]]
                           [[as.numeric(Design$Env[i])]][,2:3])
-     
+   
      # Check the first few rows (x and y grid coordinates of the first few sites)
      head(coord)
      
@@ -300,17 +300,22 @@
 # Prepare result data set: Design.90
 ####################################
 
-   Design.90 <- data.frame(Design, NumLoci=NumLoci,
-                           TPR.1=TPR[[1]], TPR.2=TPR[[2]], TPR.3=TPR[[3]], 
-                           TPR.both=TPR.both, TPR.msr=TPR.msr, 
-                           FPR.1=FPR[[1]], FPR.2=FPR[[2]], FPR.3=FPR[[3]], 
-                           FPR.both=FPR.both, FPR.msr=FPR.msr,
-                           Skewness=Skewness, Kurtosis=Kurtosis, Env.R2=Env.R2, 
-                           MC=MC, S.neutral.sd=S.neutral.sd,
-                           TPR.empirical.both=TPR.empirical.both,
-                           TPR.empirical=TPR.empirical,
-                           TPR.empirical.msr=TPR.empirical.msr)[Sites.90,]
+   # Design.90 <- data.frame(Design, NumLoci=NumLoci,
+   #                         TPR.1=TPR[[1]], TPR.2=TPR[[2]], TPR.3=TPR[[3]], 
+   #                         TPR.both=TPR.both, TPR.msr=TPR.msr, 
+   #                         FPR.1=FPR[[1]], FPR.2=FPR[[2]], FPR.3=FPR[[3]], 
+   #                         FPR.both=FPR.both, FPR.msr=FPR.msr,
+   #                         Skewness=Skewness, Kurtosis=Kurtosis, Env.R2=Env.R2, 
+   #                         MC=MC, S.neutral.sd=S.neutral.sd,
+   #                         TPR.empirical.both=TPR.empirical.both,
+   #                         TPR.empirical=TPR.empirical,
+   #                         TPR.empirical.msr=TPR.empirical.msr)[Sites.90,]
+   # Design.90$NumInd <- factor(as.character(Design.90$NumInd), levels=c("20", "6"))
+   # Design.90$Type <- factor(Design.90$Type, levels=c("R", "T", "P"))
+   # Design.90$Demography <- factor(Design.90$Demography, levels=c("2R", "1R","IBD", "IM"))
+
+   Design.90 <- data.frame(Design, NumLoci=NumLoci)[Sites.90,]
    Design.90$NumInd <- factor(as.character(Design.90$NumInd), levels=c("20", "6"))
    Design.90$Type <- factor(Design.90$Type, levels=c("R", "T", "P"))
    Design.90$Demography <- factor(Design.90$Demography, levels=c("2R", "1R","IBD", "IM"))
-
+   
