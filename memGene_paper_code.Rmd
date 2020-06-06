@@ -26,13 +26,14 @@ Response variables:
 ### a) Packages
 
 ```{r packages}
-library(adegenet)
+#library(adegenet)
 library(hierfstat)
 #library(spdep)
 #library(adespatial)
 library(memgene)
 library(here)
 library(parallel)
+library(dplyr)
 ```
 
 ### b) Import patial coordinates
@@ -109,6 +110,20 @@ Design matrix (parameter space): each row is one combination of parameter settin
    head(Design)
 ```
 
+### d) Create R replicate random samples of n = 30 sites
+
+```{r subsets}
+R = 10
+Sites.30 <- list()
+for(r in 1:R)
+{
+  Sites.30[[r]] <- sort(sample(1:90, 30, replace=FALSE))
+}
+
+saveRDS(Sites.30, paste0(here::here(), "/output/Sites.30.rds"))
+```
+
+
 ## 2. Genetic data
 
 ### a) Select datasets
@@ -147,7 +162,8 @@ getGenData <- function(j)
   # Site: create vector of sites = pops (for each row = individual)
   Site <- rep(1:Design$NumPops[i],each=as.numeric(as.vector(Design$NumInd)[i]))
   
-  Data.hierfstat <- data.frame(pop=factor(Site), tmp)
+  #Data.hierfstat <- data.frame(pop=factor(Site), tmp)
+  Data.hierfstat <- data.frame(pop=Site, tmp)
   
   return(Data.hierfstat)
 }
@@ -180,18 +196,21 @@ Results are stored in a list (one element per site j with 90 samples), with each
 Define function:
 
 ```{r getDgen}
-getDgen <- function(j, Data=Data.R.90, dist.method = c("Fst", "Dch"))
+getDgen <- function(j, Data=Data.R.90, dist.method = c("Fst", "Dch"), nLoci=9900)
 {
-  Fst <- basic.stats(Data[[j]])$overall
+  Fst <- basic.stats(Data[[j]][,1:(nLoci+1)])$overall
+
+  Fst.30 <- t(sapply(1:length(Sites.30), function(s) 
+    basic.stats(filter(Data[[j]][, 1:(nLoci+1)], is.element(pop, Sites.30[[s]])))$overall))
   
   D <- list()
   for(k in 1:length(dist.method))
   {
-    D[[k]] <- genet.dist(Data[[j]] , method = dist.method[k])
+    D[[k]] <- genet.dist(Data[[j]][,1:(nLoci+1)], method = dist.method[k])
   }
   names(D) <- dist.method
   
-  return(list(Fst.sample=Fst, Dgen=D))
+  return(list(Fst=Fst, Fst.30 = Fst.30, Dgen=D))
 }
 ```
 
@@ -202,7 +221,7 @@ start_time <- Sys.time()
 
 Index.j <- 1:length(Sites.R.90)
 
-Dgen.R.90 <- mclapply(Index.j, function(j) getDgen(j, Data=Data.R.90, 
+Dgen.R.90 <- mclapply(Index.j, function(j) getDgen(j, Data=Data.R.90, nLoci=9900, 
                                                  dist.method=c("Fst", "Dch")),
                  mc.cores=detectCores())
 names(Dgen.R.90) <- Sites.R.90
@@ -214,9 +233,31 @@ cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
 saveRDS(Dgen.R.90, paste0(here::here(), "/output/Dgen.R.90.rds"))
 ```
 
+Repeat for first 3300 loci
+
+(Note: no effect of locus number on variability, i.e., first 3300 can be considered a random sample as much as any other subset of 3300)
+
+```{r Dgen90.3}
+start_time <- Sys.time()
+
+Index.j <- 1:length(Sites.R.90)
+
+Dgen.R.90.3 <- mclapply(Index.j, function(j) getDgen(j, Data=Data.R.90, nLoci=3300,
+                                                 dist.method=c("Fst", "Dch")),
+                 mc.cores=detectCores())
+names(Dgen.R.90.3) <- Sites.R.90
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Dgen.R.90.3, paste0(here::here(), "/output/Dgen.R.90.3.rds"))
+```
+
 Results are stored in a list (one element per site j with 90 samples) with these elements:
 
-- Fst.sample: 'overall' statistics returned by `basic.stats` function
+- Fst: vector with 'overall' statistics returned by `basic.stats` function
+- Fst.30: matrix with statistics for ten subsets of n = 30 sites
 - Dgen: list of pairwise genetic distance matrices
     - Fst (Fst)
     - Cavalli-Sforza and Edwards Chord distance (Dch)
@@ -332,6 +373,24 @@ cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
 saveRDS(Results.R.90, paste0(here::here(), "/output/Results.R.90.rds"))
 ```
 
+Repeat for 3300 loci
+
+```{r MEMgene90.3}
+start_time <- Sys.time() 
+
+Index.j <- 1:length(Sites.R.90)
+
+Results.R.90.3 <- mclapply(Index.j, function(j) getMEMgene(j, Dgen = Dgen.R.90.3, subset=NULL),
+                    mc.cores=detectCores())
+names(Results.R.90.3) <- Sites.R.90
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Results.R.90.3, paste0(here::here(), "/output/Results.R.90.3.rds"))
+```
+
 Results are stored in a list (one element per site j with 90 samples) with these elements:
 
 - List with one element per genetic distance measure:
@@ -341,14 +400,15 @@ Results are stored in a list (one element per site j with 90 samples) with these
   - Range: range (minimum and maximum) of Moran's I of MEM vectors (limits for Moran's I of genetic data)
 
   
-## 3. Analyse results for n = 90
-
-### a) Compile results
+## 3. Compile results for n = 90
 
 Import results without overwriting:
 
 ```{r}
 Results <- readRDS(paste0(here::here(), "/output/Results.R.90.rds"))
+Results.3 <- readRDS(paste0(here::here(), "/output/Results.R.90.3.rds"))
+D <- readRDS(paste0(here::here(), "/output/Dgen.R.90.rds"))
+D.3 <- readRDS(paste0(here::here(), "/output/Dgen.R.90.3.rds"))
 ```
 
 Function to extract response variables
@@ -369,16 +429,28 @@ getRes <- function(Results=Results, k = 1)
 Combine response variables with Design matrix
 
 ```{r}
+Ftab <- data.frame(Fst.90 = sapply(D, function(ls) ls$Fst[7]),
+                   Fst.30.m = sapply(D, function(ls) mean(ls$Fst.30[,7])),
+                   Fst.30.s = sapply(D, function(ls) sd(ls$Fst.30[,7])),
+                   Fst.90.3 = sapply(D.3, function(ls) ls$Fst[7]),
+                   Fst.30.m.3 = sapply(D.3, function(ls) mean(ls$Fst.30[,7])),
+                   Fst.30.s.3 = sapply(D.3, function(ls) sd(ls$Fst.30[,7])))
+
 res <- lapply(c(1:length(Results[[1]])), function(k) getRes(Results, k))
-names(res) <- names(Results[[1]])
+res.3 <- lapply(c(1:length(Results.3[[1]])), function(k) getRes(Results.3, k))
+names(res) <- names(res.3) <-names(Results[[1]])
 
 res.combined <- Reduce(cbind, res)
+res.3.combined <- Reduce(cbind, res.3)
 names(res.combined) <- paste(rep(names(Results[[1]]), each=ncol(res[[1]])), 
                              names(res[[1]]), sep=".")
+names(res.3.combined) <- paste(names(res.combined), 3, sep=".")
 
-Results.table <- data.frame(Design[Sites.R.90,], res.combined)
+Results.table <- data.frame(Design[Sites.R.90,], Ftab, res.combined, res.3.combined)
 saveRDS(Results.table, paste0(here::here(), "/output/Results.table.rds"))
 Results.table
+
+rm(list=c("Results", "Results.3", "D", "D.3"))
 ```
 
 
@@ -387,6 +459,7 @@ Analyze according to the following factors:
 - Demography (1R, 2R, IBD, IM)
 - NumInd: 20, 6
 - Genetic distance measure (Fst, Dch)
+- Number of loci (9900 or 3300) (where variable names with .3 denote 3300 loci)
 
 Response variables:
 
@@ -399,36 +472,12 @@ Notes:
 
 - Env: for each combination, there are three replicate datasets (Env: 453, 988, 950). Env could be used as a blocking variable.
 
-### b) Create plots
 
-See below.
+## 4. Analyze data for subsets with 30 pops
 
+### a) Repeat MEMgene with n = 30
 
-### c) Statistical analysis
-
-See below.
-
-
-## 4. Get results for subsets with 30 pops
-
-This can probably be done quickly by subsetting the genetic distance matrices. 
-
-What subsets do we want to use? We could use several (e.g. R = 10) random subsets of 30 sites, but the same subset for all datasets in Sites.R.90.
-
-### a) Create R replicate random samples of n = 30 sites
-
-```{r subsets}
-R = 10
-Sites.30 <- list()
-for(r in 1:R)
-{
-  Sites.30[[r]] <- sort(sample(1:90, 30, replace=FALSE))
-}
-
-saveRDS(Sites.30, paste0(here::here(), "/output/Sites.30.rds"))
-```
-
-### b) Get results for subsets with n = 30 sites
+The R = 10 subsets of n = 30 sites for each dataset with n = 90 sites were defined above already in object `Sites.30`.
 
 ```{r MEMgene30}
 start_time <- Sys.time()
@@ -452,10 +501,29 @@ cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
 saveRDS(Results.R.30, paste0(here::here(), "/output/Results.R.30.rds"))
 ```
 
+Repeat for 3300 loci
 
-## 5. Analyse results for n = 30
+```{r MEMgene30.3}
+start_time <- Sys.time()
 
-### a) Compile results
+Results.R.30.3 <- rep( list(list()), R)
+
+for(r in 1:R)
+{
+  Results.R.30.3[[r]] <- mclapply(Index.j, function(j) getMEMgene(j, Dgen = Dgen.R.90.3,
+                                                       subset=Sites.30[[r]]),
+                                mc.cores=detectCores())
+  names(Results.R.30.3[[r]]) <- Sites.R.90
+}
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Results.R.30.3, paste0(here::here(), "/output/Results.R.30.3.rds"))
+```
+
+### b) Compile results for n = 30
 
 Determine mean and sdev among the R = 10 replicate subsets for each datasest with 90 pops.
 
@@ -463,6 +531,7 @@ Import results without overwriting:
 
 ```{r}
 Results.subsets <- readRDS(paste0(here::here(), "/output/Results.R.30.rds"))
+Results.3.subsets <- readRDS(paste0(here::here(), "/output/Results.R.30.3.rds"))
 ```
 
 Combine mean and sdev of response variables with Design matrix:
@@ -472,6 +541,8 @@ Note: dropped Rsq due to errors when knitting.
 ```{r}
 res.r <- lapply(Results.subsets, function(sub) 
   lapply(c(1:length(Results.subsets[[1]][[1]])), function(k) getRes(sub, k)))
+res.r.3 <- lapply(Results.3.subsets, function(sub) 
+  lapply(c(1:length(Results.3.subsets[[1]][[1]])), function(k) getRes(sub, k)))
 
 tmp <- list()
 for(k in 1:length(res.r[[1]]))
@@ -491,12 +562,33 @@ for(k in 1:length(res.r[[1]]))
                            I.scaled.30.m=I.scaled.30.m, I.scaled.30.s=I.scaled.30.s)
 }
 
+tmp.3 <- list()
+for(k in 1:length(res.r[[1]]))
+  {
+    RsqAdj.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$RsqAdj), 1, mean)
+    RsqAdj.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$RsqAdj), 1, sd)
+    #Rsq.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$Rsq), 1, mean)
+    #Rsq.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$Rsq), 1, sd)
+    Morans.I.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$Morans.I), 1, mean)
+    Morans.I.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$Morans.I), 1, sd)
+    I.scaled.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$Morans.I) / 
+      sapply(res.r.3, function(sub) sub[[k]]$I.max), 1, mean)
+    I.scaled.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$Morans.I) / 
+      sapply(res.r.3, function(sub) sub[[k]]$I.max), 1, sd)
+    tmp.3[[k]] <- data.frame(RsqAdj.30.3.m=RsqAdj.30.m, RsqAdj.30.3.s=RsqAdj.30.s, 
+                           Morans.I.30.3.m=Morans.I.30.m, Morans.I.30.3.s=Morans.I.30.s,
+                           I.scaled.30.3.m=I.scaled.30.m, I.scaled.30.3.s=I.scaled.30.s)
+}
+
 res.r.combined <- Reduce(cbind, tmp)
+res.r.3.combined <- Reduce(cbind, tmp.3)
 names(res.r.combined) <- paste(rep(names(Results.subsets[[1]][[1]]), each=ncol(tmp[[1]])), 
                              names(tmp[[1]]), sep=".")
+names(res.r.3.combined) <- paste(rep(names(Results.subsets[[1]][[1]]), each=ncol(tmp[[1]])), 
+                             names(tmp.3[[1]]), sep=".")
 
 
-Results.subsets.table <- data.frame(Results.table, res.r.combined)
+Results.subsets.table <- data.frame(Results.table, res.r.combined, res.r.3.combined)
 saveRDS(Results.subsets.table, paste0(here::here(), "/output/Results.subsets.table.rds"))
 Results.subsets.table
 ```
@@ -508,29 +600,26 @@ I.max.30 <- sapply(Results.subsets, function(sub) max(sub[[1]][[1]]$Range))
 I.max.30
 ```
 
+## 5. Analyze results for n = 90
 
-### b) Create plots
-
-For datasets with n = 90 sites
-
-Effect of Demography:
+### a) Effect of Demography
 
 ```{r fig.height=5, fig.width=8}
 par(mfrow=c(2,3))
 with(Results.subsets.table, boxplot(Fst.RsqAdj.90 ~ Demography,
-     main="Fst.Rsq.Adj"))
+     main="Fst.Rsq.Adj", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Fst.Morans.I.90 ~ Demography,
-     main="Fst.Morans.I"))
+     main="Fst.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Fst.I.scaled.90 ~ Demography,
-     main="Fst.I.scaled"))
+     main="Fst.I.scaled", ylim=c(0,1)))
 
 
 with(Results.subsets.table, boxplot(Dch.RsqAdj.90 ~ Demography,
-     main="Dch.Rsq.Adj"))
+     main="Dch.Rsq.Adj", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Dch.Morans.I.90 ~ Demography,
-     main="Dch.Morans.I"))
+     main="Dch.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Dch.I.scaled.90 ~ Demography,
-     main="Dch.I.scaled"))
+     main="Dch.I.scaled", ylim=c(0,1)))
 par(mfrow=c(1,1))
 ```
 **Interpretation:**
@@ -541,51 +630,104 @@ par(mfrow=c(1,1))
 - Same patterns for Fst and Dch.
 
 
-Effect of the number of individuals sampled:
+### b) Effect of number of individuals
 
 ```{r fig.height=5, fig.width=8}
 Results.subsets.table$NumInd <- factor(as.character(Results.subsets.table$NumInd))
 
 par(mfrow=c(2,3))
 with(Results.subsets.table, boxplot(Fst.RsqAdj.90 ~ NumInd,
-     main="Fst.Rsq.Adj"))
+     main="Fst.Rsq.Adj", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Fst.Morans.I.90 ~ NumInd,
-     main="Fst.Morans.I"))
+     main="Fst.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Fst.I.scaled.90 ~ NumInd,
-     main="Fst.I.scaled"))
+     main="Fst.I.scaled", ylim=c(0,1)))
 
 
 with(Results.subsets.table, boxplot(Dch.RsqAdj.90 ~ NumInd,
-     main="Dch.Rsq.Adj"))
+     main="Dch.Rsq.Adj", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Dch.Morans.I.90 ~ NumInd,
-     main="Dch.Morans.I"))
+     main="Dch.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Dch.I.scaled.90 ~ NumInd,
-     main="Dch.I.scaled"))
+     main="Dch.I.scaled", ylim=c(0,1)))
 par(mfrow=c(1,1))
 ```
+
 **Interpretation:**
 
 - All measures are sensitive to the number of individuals sampled per population!
 - Same patterns for Fst and Dch.
 - Note as above: all datasets with n = 90 have the same samplign design and thus the same maximum value for Moran's I of the genetic data, hence rescaling does not change the pattern, only the absolute values.
 
+### c) Effect of the number of loci
 
-Compare n = 30 to n = 90
+```{r fig.height=5, fig.width=8}
+par(mfrow=c(2,3))
+with(Results.subsets.table, boxplot(list("3300"=Fst.RsqAdj.90.3, "9900"=Fst.RsqAdj.90),
+     main="Fst.Rsq.Adj, n=90", ylim=c(0,1)))
+with(Results.subsets.table, boxplot(list("3300"=Fst.Morans.I.90.3, "9900"=Fst.Morans.I.90),
+     main="Fst.Morans.I, n=90", ylim=c(0,1)))
+with(Results.subsets.table, boxplot(list("3300"=Fst.I.scaled.90.3, "9900"=Fst.I.scaled.90),
+     main="Fst.I.scaled, n=90", ylim=c(0,1)))
+
+
+with(Results.subsets.table, boxplot(list("3300"=Fst.RsqAdj.30.3.m, "9900"=Fst.RsqAdj.30.m),
+     main="Fst.Rsq.Adj, n=30", ylim=c(0,1)))
+with(Results.subsets.table, boxplot(list("3300"=Fst.Morans.I.30.3.m, "9900"=Fst.Morans.I.30.m),
+     main="Fst.Morans.I, n=30", ylim=c(0,1)))
+with(Results.subsets.table, boxplot(list("3300"=Fst.I.scaled.30.3.m, "9900"=Fst.I.scaled.30.m),
+     main="Fst.I.scaled, n=30", ylim=c(0,1)))
+par(mfrow=c(1,1))
+```
+**Interpretation:**
+
+- No effect! Genetic resolution here depends on number of individuals, not loci??
+- Double checked, will check again as this is counter intuitive.
+
+
+## 6. Compare n = 30 to n = 90
+
+### a) Fst by Demography and sample size
+
+```{r}
+par(mfrow=c(2,2))
+
+with(Results.subsets.table, boxplot(Fst.30.m ~ Demography,
+     main="Fst.30 (9900 loci)", ylim=c(0.01,0.015)))
+with(Results.subsets.table, boxplot(Fst.90 ~ Demography,
+     main="Fst.90 (9900 loci)", ylim=c(0.01,0.015)))
+
+with(Results.subsets.table, boxplot(Fst.30.m.3 ~ Demography,
+     main="Fst.30 (3300 loci)", ylim=c(0.01,0.015)))
+with(Results.subsets.table, boxplot(Fst.90.3 ~ Demography,
+     main="Fst.90 (3300 loci)", ylim=c(0.01,0.015)))
+
+par(mfrow=c(1,1))
+```
+
+**Interpretation:**
+
+- Fst robust towards number of loci or samples.
+- Measures also non-spatial structure (IM model has similar Fst as 2R). In IM model, populations are differentiated but nearby populations are not more similar than distant ones.
+- Why does 2R have lower Fst than 1R and IM?
+
+
+### b) Compare response variables 
 
 ```{r fig.height=5, fig.width=8}
 par(mfrow=c(2,3))
 with(Results.subsets.table, boxplot(list("30"=Fst.RsqAdj.30.m, "90"=Fst.RsqAdj.90),
-     main="Fst.Rsq.Adj"))
+     main="Fst.Rsq.Adj", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Fst.Morans.I.30.m, "90"=Fst.Morans.I.90),
-     main="Fst.Morans.I"))
+     main="Fst.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Fst.I.scaled.30.m, "90"=Fst.I.scaled.90),
-     main="Fst.I.scaled"))
+     main="Fst.I.scaled", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Dch.RsqAdj.30.m, "90"=Dch.RsqAdj.90),
-     main="Dch.Rsq.Adj"))
+     main="Dch.Rsq.Adj", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Dch.Morans.I.30.m, "90"=Dch.Morans.I.90),
-     main="Dch.Morans.I"))
+     main="Dch.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Dch.I.scaled.30.m, "90"=Dch.I.scaled.90),
-     main="Dch.I.scaled"))
+     main="Dch.I.scaled", ylim=c(0,1)))
 par(mfrow=c(1,1))
 ```
 **Interpretation:**
@@ -595,7 +737,7 @@ par(mfrow=c(1,1))
 - Rescaled Moran's I more comparable than original Moran's I.
 
 
-Account for sample size (Moran's I):
+#### Account for sample size (Moran's I):
 
 Cheng 2013: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0068336
 
@@ -603,16 +745,16 @@ Cheng 2013: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.00
 par(mfrow=c(2,2))
 with(Results.subsets.table, boxplot(list("30"=Fst.Morans.I.30.m * 29/30, 
                                          "90"=Fst.Morans.I.90 *89/90),
-     main="Fst.Morans.I"))
+     main="Fst.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Fst.I.scaled.30.m * 29/30,
                                          "90"=Fst.I.scaled.90*89/90),
-     main="Fst.I.scaled"))
+     main="Fst.I.scaled", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Dch.Morans.I.30.m * 29/30, 
                                          "90"=Dch.Morans.I.90 *89/90),
-     main="Dch.Morans.I"))
+     main="Dch.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(list("30"=Dch.I.scaled.30.m * 29/30,
                                          "90"=Dch.I.scaled.90*89/90),
-     main="Dch.I.scaled"))
+     main="Dch.I.scaled", ylim=c(0,1)))
 par(mfrow=c(1,1))
 ```
 **Interpretation:**
@@ -621,7 +763,7 @@ par(mfrow=c(1,1))
 - Same patterns for Fst and Dch.
 
 
-### c) Statistical analysis
+### c) Paired t-tests
 
 Paired t-tests for difference between mean of subsamples with n = 30 and corresponding datasets with n = 90 sites.
 
@@ -642,7 +784,9 @@ with(Results.subsets.table, t.test(Fst.I.scaled.30.m * 29/30,
                                          Fst.I.scaled.90*89/90, paired=TRUE))
 ```
 
-Effect sizes (Cohen's d for paired t-test): this is interesting!
+### d) Effect sizes 
+
+Cohen's d for paired t-test. This is interesting!
 
 **Interpretation:**
 
@@ -665,7 +809,7 @@ with(Results.subsets.table, mean(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/
        sd(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90))
 ```
 
-Drop IM model: effect size (Cohen's d for paired t-test)
+### e) Effect size without IM model
 
 **Interpretation:**
 
@@ -693,7 +837,7 @@ with(Results.subsets.table[Results.subsets.table$Demography != "IM",],
        sd(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90))
 ```
 
-Repeat paired t-tests without IM model:
+### f) Repeat t-tests without IM model
 
 **Interpretation:**
 
