@@ -1067,4 +1067,70 @@ HW Notes:
 - Moran's I bad estimator of rho? No, because rho not  better. C is somewhat better.
 - z-score for null distribution of Moran's I? No, because z scores even more different
 
+## 7. Interaction Plots
 
+### a) Interaction plots for Fst adjusted R^2  (n=90)
+
+```{r fig.height=3, fig.width=8}
+par(mfrow=c(1,3))
+Results.subsets.table$NumInd <- factor(as.character(Results.subsets.table$NumInd))
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+
+```
+
+### b) Interaction plots for Dch adjusted R^2  (n=90)
+
+```{r fig.height=3, fig.width=8}
+par(mfrow=c(1,3))
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.RsqAdjPos.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.RsqAdjPos.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.RsqAdjPos.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+
+```
+
+
+### c) Interaction plots for Morans.I  (n=90)
+
+```{r fig.height=6, fig.width=8}
+par(mfrow=c(2,3))
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.Morans.I.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.Morans.I.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.Morans.I.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.Morans.I.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.Morans.I.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.Morans.I.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+
+```
+
+### d) Interaction plots for Scaled Morans.I using 2 scaling methods (n=90)
+
+```{r fig.height=6, fig.width=8}
+par(mfrow=c(4,3))
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled2.90, type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled2.90.3, type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled2.90.500, type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled2.90, type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled2.90.3, type = "b", pch = c(19,17), fixed = TRUE)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled2.90.500, type = "b", pch = c(19,17), fixed = TRUE)})
+
+```
+# we dont need this one! I
+
+### e) Interaction plots for Fst adjusted R^2  (n=30) 
+
+```{r fig.height=3, fig.width=8}
+par(mfrow=c(1,3))
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.30.m)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.30.3.m)})
+with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.30.500.m)})
+
+```
+# add the 90s for contrast
