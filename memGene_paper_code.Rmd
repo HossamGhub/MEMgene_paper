@@ -1134,3 +1134,196 @@ with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.
 
 ```
 # add the 90s for contrast
+
+
+## 8. Missing sites
+
+Simulations to compare results between full sample and sample with some missing sites. Two possible methods:
+
+- Redo MEMgene (including MEM) for each dataset, based on available sites
+- Keep MEM, do adj R2 based on positive MEM, which avoids overfitting
+
+### a) Leave D out 
+
+Run function in parallel:
+
+```{r MEMgeneD}
+#Dgen.R.90 <- readRDS(paste0(here::here(), "/output/Dgen.R.90.rds"))
+
+start_time <- Sys.time() 
+
+Index.j <- 1:length(Sites.R.90)
+for(d in 1:10)
+{
+  Results.drop[[d]] <- mclapply(Index.j, function(j) getMEMgene(j, Dgen = Dgen.R.90, subset=NULL, drop=d),
+                    mc.cores=detectCores())
+}
+
+#names(Results.R.90) <- Sites.R.90
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+#saveRDS(Results.R.90, paste0(here::here(), "/output/Results.R.90.rds"))
+```
+
+```{r getMEMgene}
+getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL, drop=NULL)
+{
+  i=Sites.R.90[j]
+  cat("j:", j, ", i:", i, "\n")
+  
+  # Extract the grid coordinates of the sampled sites
+  coord <- data.matrix(Coords[[as.numeric(Design$Type[i])]]
+                     [[as.numeric(Design$Env[i])]][,2:3])
+  if(length(subset) > 0)
+  {
+     coord <- coord[subset,]
+  }
+  
+  if(length(drop) > 0) { coord.drop <- coord[-drop,]}
+  
+  Res <- list()
+  for(k in 1: length(Dgen[[j]]$Dgen))
+  {
+    
+    Y <- as.matrix(Dgen[[j]]$Dgen[[k]])
+    if(length(drop) > 0) {Y = Y[-drop, -drop]}
+    
+    if(length(subset) > 0)
+    {
+       Y <- Y[subset, subset]
+    }
+    
+    # memGene
+    
+    MEM <- mgMEM(dist(coord))
+    
+    if(length(drop) > 0) 
+    {
+      MEM$vectorsMEM <- MEM$vectorsMEM[-drop,]
+    }
+
+    Positive <- mgForward(Y, MEM$vectorsMEM[, MEM$valuesMEM > 0])
+    #Negative <- mgForward(Y,MEM$vectorsMEM[ -drop, MEM$valuesMEM < 0])
+    #allSelected <- cbind(MEM$vectorsMEM[-drop, MEM$valuesMEM > 0][,na.omit(Positive$selectedMEM)],
+    #                  MEM$vectorsMEM[-drop, MEM$valuesMEM < 0][,na.omit(Negative$selectedMEM)])
+    RsqAdjPos = 0
+    if(!is.na(Positive$selectedRsqAdj)) { RsqAdjPos = Positive$selectedRsqAdj}
+    
+    # if(ncol(allSelected) > 0)
+    # {
+    #    MEM$analysis <- mgRDA(Y, allSelected, full=TRUE)
+    #    RsqAdj <- MEM$analysis$RsqAd
+    #    Rsq <- sum(diag(MEM$analysis$pred)) / (sum(diag(MEM$analysis$pred)) +
+    #                                           sum(diag(MEM$analysis$resid)))
+    #    if(length(Positive$selectedMEM) > 0) 
+    #    {
+    #      RsqAdjPos <- mgRDA(Y, allSelected[,1:length(Positive$selectedMEM)], full=TRUE)$RsqAd
+    #    }
+    # }
+    
+    if(length(drop) > 0)
+    {
+      MEM.drop <- mgMEM(dist(coord.drop))
+      
+      Positive <- mgForward(Y, MEM.drop$vectorsMEM[ , MEM.drop$valuesMEM > 0])
+      RsqAdjPos.drop = 0
+      if(!is.na(Positive$selectedRsqAdj)) { RsqAdjPos.drop = Positive$selectedRsqAdj}
+    }
+
+    # Centre distance matrix
+    n <- nrow(Y)
+    row.wt = rep(1, nrow(Y))
+    col.wt = rep(1, ncol(Y))
+    st <- sum(col.wt)
+    sr <- sum(row.wt)
+    row.wt <- row.wt/sr
+    col.wt <- col.wt/st
+    Y <- -0.5 * (Y * Y)
+    row.mean <- apply(row.wt * Y, 2, sum)
+    col.mean <- apply(col.wt * t(Y), 2, sum)
+    col.mean <- col.mean - sum(row.mean * col.wt)
+    Y <- sweep(Y, 2, row.mean)
+    G <- t(sweep(t(Y), 2, col.mean))
+    
+    # Get Rsq for each MEM vector from a separate dbRDA for each vector m
+    X <- MEM$vectorsMEM
+  
+    S <- rep(0, ncol(X))
+    for(m in 1:ncol(X))
+    {
+      if(var(X[,m]) > 0)
+      {
+        p = 1
+        H <- X[,m] %*% solve(t(X[,m]) %*% X[,m]) %*% t(X[,m])
+        I <- diag(n)
+        res <- (I - H) %*% G %*% (I - H)
+        S[m] <- 1 - sum(diag(res))/sum(diag(G))
+      }
+    }
+    
+    #HW: check why these corrections are needed:  
+    S.tot = sum(S)
+    S[S < 0] <- 0
+    S = S / sum(S)
+    
+    #tmp <- mgW.HW(dist(coord))
+    #if(length(drop) > 0) tmp <- mgW.HW(dist(coord.drop))
+    
+    # Get Moran's I
+    Values <- MEM$valuesMEM / abs(sum(MEM$valuesMEM))
+    Range <- range(Values)
+    Morans.I <- as.vector(S %*% Values)
+    #I.sd <- ape::Moran.I(rnorm(n), tmp)$sd
+    C <- diag(t(sqrt(S)) %*% diag(Values^2) %*% sqrt(S))
+    Rho <- Morans.I / sqrt(C)
+    
+    if(length(drop) > 0)
+    {
+      X <- MEM.drop$vectorsMEM
+  
+      S <- rep(0, ncol(X))
+      for(m in 1:ncol(X))
+      {
+        if(var(X[,m]) > 0)
+        {
+          p = 1
+          H <- X[,m] %*% solve(t(X[,m]) %*% X[,m]) %*% t(X[,m])
+          I <- diag(n)
+          res <- (I - H) %*% G %*% (I - H)
+          S[m] <- 1 - sum(diag(res))/sum(diag(G))
+        }
+      }
+      
+      S.tot.drop = sum(S)
+      S[S < 0] <- 0
+      S = S / sum(S)
+    
+      #tmp <- mgW.HW(dist(coord.drop))
+    
+      # Get Moran's I
+      Values <- MEM.drop$valuesMEM / abs(sum(MEM.drop$valuesMEM))
+      Range.drop <- range(Values)
+      Morans.I.drop <- as.vector(S %*% Values)
+      #I.sd.drop <- ape::Moran.I(rnorm(n), tmp)$sd
+      C.drop <- diag(t(sqrt(S)) %*% diag(Values^2) %*% sqrt(S))
+      Rho.drop <- Morans.I.drop / sqrt(C.drop)
+    }
+    
+    Res[[k]] <- list(RsqAdjPos=RsqAdjPos, Morans.I=Morans.I, C=C, Rho=Rho, Range=Range)
+    if(length(drop) > 0)
+    {
+      Res[[k]] <- list(RsqAdjPos=RsqAdjPos, Morans.I=Morans.I, C=C, Rho=Rho, Range=Range,
+                       RsqAdjPos.drop=RsqAdjPos.drop, Morans.I.drop=Morans.I.drop, 
+                       C.drop=C.drop, Rho.drop=Rho.drop, Range.drop=Range.drop, S.tot=S.tot, 
+                       S.tot.drop=S.tot.drop)
+    }
+  }
+  names(Res) <- names(Dgen[[1]]$Dgen)
+  
+  return(Res)
+}
+```
+
