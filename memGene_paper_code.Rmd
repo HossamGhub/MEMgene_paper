@@ -297,12 +297,14 @@ Results are stored in a list (one element per site j with 90 samples) with these
 
 ### d) Run function 'getMEMgene' to obtain RsqAdj and Moran's I
 
-This function extracts the grid coordinates, performs memgene analysis with forward selection to obtain the adjusted Rsquare. It also calculates the raw (unadjusted) Rsquare, then calculates Moran's I for the genetic data by obtaining a scalogram S (Rsquare for each MEM vector, which sum to 1 across all MEM vectors) and multiplying with the rescaled MEM eigenvectors (Moran's I for each vector). It also returns the limits for Moran's I of the genetic data (min and max of Moran's I values of MEM vectors).
+This function extracts the grid coordinates, performs memgene analysis with forward selection to obtain the adjusted Rsquare. It also calculates Moran's I for the genetic data by obtaining a scalogram S (Rsquare for each MEM vector, which sum to 1 across all MEM vectors) and multiplying with the rescaled MEM eigenvectors (Moran's I for each vector). It also returns the limits for Moran's I of the genetic data (min and max of Moran's I values of MEM vectors).
+
+Argument 'subset' specifies a subset of sites to be used (for samples with n = 30). Argument 'drop' specifies which sites should be dropped (for simulating missing sites).
 
 Define function:
 
 ```{r getMEMgene}
-getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL)
+getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL, drop=NULL)
 {
   i=Sites.R.90[j]
   cat("j:", j, ", i:", i, "\n")
@@ -315,11 +317,14 @@ getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL)
      coord <- coord[subset,]
   }
   
+  if(length(drop) > 0) { coord.drop <- coord[-drop,]}
+  
   Res <- list()
   for(k in 1: length(Dgen[[j]]$Dgen))
   {
     
     Y <- as.matrix(Dgen[[j]]$Dgen[[k]])
+    if(length(drop) > 0) {Y = Y[-drop, -drop]}
     
     if(length(subset) > 0)
     {
@@ -329,23 +334,39 @@ getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL)
     # memGene
     
     MEM <- mgMEM(dist(coord))
-
-    Positive <- mgForward(Y, MEM$vectorsMEM[ , MEM$valuesMEM > 0])
-    Negative <- mgForward(Y,MEM$vectorsMEM[ , MEM$valuesMEM < 0])
-    allSelected <- cbind(MEM$vectorsMEM[, MEM$valuesMEM > 0][,na.omit(Positive$selectedMEM)],
-                     MEM$vectorsMEM[, MEM$valuesMEM < 0][,na.omit(Negative$selectedMEM)])
-    RsqAdj = RsqAdjPos =Rsq = 0
-    if(ncol(allSelected) > 0)
+    
+    if(length(drop) > 0) 
     {
-      MEM$analysis <- mgRDA(Y, allSelected, full=TRUE)
-      RsqAdj <- MEM$analysis$RsqAd
-      Rsq <- sum(diag(MEM$analysis$pred)) / (sum(diag(MEM$analysis$pred)) +
-                                             sum(diag(MEM$analysis$resid)))
-      if(length(Positive$selectedMEM) > 0) 
-      {
-        RsqAdjPos <- mgRDA(Y, allSelected[,1:length(Positive$selectedMEM)], full=TRUE)$RsqAd
-      }
-    } 
+      MEM$vectorsMEM <- MEM$vectorsMEM[-drop,]
+    }
+
+    Positive <- mgForward(Y, MEM$vectorsMEM[, MEM$valuesMEM > 0])
+    #Negative <- mgForward(Y,MEM$vectorsMEM[ -drop, MEM$valuesMEM < 0])
+    #allSelected <- cbind(MEM$vectorsMEM[-drop, MEM$valuesMEM > 0][,na.omit(Positive$selectedMEM)],
+    #                  MEM$vectorsMEM[-drop, MEM$valuesMEM < 0][,na.omit(Negative$selectedMEM)])
+    RsqAdjPos = 0
+    if(!is.na(Positive$selectedRsqAdj)) { RsqAdjPos = Positive$selectedRsqAdj}
+    
+    # if(ncol(allSelected) > 0)
+    # {
+    #    MEM$analysis <- mgRDA(Y, allSelected, full=TRUE)
+    #    RsqAdj <- MEM$analysis$RsqAd
+    #    Rsq <- sum(diag(MEM$analysis$pred)) / (sum(diag(MEM$analysis$pred)) +
+    #                                           sum(diag(MEM$analysis$resid)))
+    #    if(length(Positive$selectedMEM) > 0) 
+    #    {
+    #      RsqAdjPos <- mgRDA(Y, allSelected[,1:length(Positive$selectedMEM)], full=TRUE)$RsqAd
+    #    }
+    # }
+    
+    if(length(drop) > 0)
+    {
+      MEM.drop <- mgMEM(dist(coord.drop))
+      
+      Positive <- mgForward(Y, MEM.drop$vectorsMEM[ , MEM.drop$valuesMEM > 0])
+      RsqAdjPos.drop = 0
+      if(!is.na(Positive$selectedRsqAdj)) { RsqAdjPos.drop = Positive$selectedRsqAdj}
+    }
 
     # Centre distance matrix
     n <- nrow(Y)
@@ -378,22 +399,65 @@ getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL)
       }
     }
     
-    #HW: check why these corrections are needed:  
+    #HW: check why these corrections are needed sometimes?
+    #    Dropped correction due to issues with 'drop5' data
+    S.tot = sum(S)
+    S.min = min(S)
     S[S < 0] <- 0
-    S = S / sum(S)
+    #S = S / sum(S)
     
-    tmp <- mgW.HW(dist(coord))
+    #tmp <- mgW.HW(dist(coord))
+    #if(length(drop) > 0) tmp <- mgW.HW(dist(coord.drop))
     
     # Get Moran's I
     Values <- MEM$valuesMEM / abs(sum(MEM$valuesMEM))
     Range <- range(Values)
     Morans.I <- as.vector(S %*% Values)
-    I.sd <- ape::Moran.I(rnorm(n), mgW.HW(dist(coord)))$sd
+    #I.sd <- ape::Moran.I(rnorm(n), tmp)$sd
     C <- diag(t(sqrt(S)) %*% diag(Values^2) %*% sqrt(S))
     Rho <- Morans.I / sqrt(C)
     
-    Res[[k]] <- list(RsqAdj=RsqAdj, RsqAdjPos=RsqAdjPos, Rsq=Rsq, Morans.I=Morans.I, 
-                     C=C, Rho=Rho, Range=Range, I.sd=I.sd)
+    # if(length(drop) > 0)
+    # {
+    #   X <- MEM.drop$vectorsMEM
+    # 
+    #   S <- rep(0, ncol(X))
+    #   for(m in 1:ncol(X))
+    #   {
+    #     if(var(X[,m]) > 0)
+    #     {
+    #       p = 1
+    #       H <- X[,m] %*% solve(t(X[,m]) %*% X[,m]) %*% t(X[,m])
+    #       I <- diag(n)
+    #       res <- (I - H) %*% G %*% (I - H)
+    #       S[m] <- 1 - sum(diag(res))/sum(diag(G))
+    #     }
+    #   }
+    #   
+    #   S.tot.drop = sum(S)
+    #   S[S < 0] <- 0
+    #   #S = S / sum(S)
+    # 
+    #   #tmp <- mgW.HW(dist(coord.drop))
+    # 
+    #   # Get Moran's I
+    #   Values <- MEM.drop$valuesMEM / abs(sum(MEM.drop$valuesMEM))
+    #   Range.drop <- range(Values)
+    #   Morans.I.drop <- as.vector(S %*% Values)
+    #   #I.sd.drop <- ape::Moran.I(rnorm(n), tmp)$sd
+    #   C.drop <- diag(t(sqrt(S)) %*% diag(Values^2) %*% sqrt(S))
+    #   Rho.drop <- Morans.I.drop / sqrt(C.drop)
+    # }
+    
+    Res[[k]] <- list(RsqAdjPos=RsqAdjPos, Morans.I=Morans.I, C=C, Rho=Rho, Range=Range, S.tot=S.tot, S.min=S.min)
+    
+    # if(length(drop) > 0)
+    # {
+    #   Res[[k]] <- list(RsqAdjPos=RsqAdjPos, Morans.I=Morans.I, C=C, Rho=Rho, Range=Range,
+    #                    RsqAdjPos.drop=RsqAdjPos.drop, Morans.I.drop=Morans.I.drop, 
+    #                    C.drop=C.drop, Rho.drop=Rho.drop, Range.drop=Range.drop, 
+    #                    S.tot=S.tot, S.min=S.min, S.tot.drop=S.tot.drop)
+    # }
   }
   names(Res) <- names(Dgen[[1]]$Dgen)
   
@@ -485,24 +549,50 @@ D.500 <- readRDS(paste0(here::here(), "/output/Dgen.R.90.500.rds"))
 Function to extract response variables
 
 ```{r}
+# getRes <- function(Results=Results, k = 1)
+# {
+#   RsqAdj = sapply(Results, function(ls) ls[[k]]$RsqAdj)
+#   RsqAdjPos = sapply(Results, function(ls) ls[[k]]$RsqAdjPos)
+#   Rsq = sapply(Results, function(ls) ls[[k]]$Rsq)
+#   Morans.I = sapply(Results, function(ls) ls[[k]]$Morans.I)
+#   C = sapply(Results, function(ls) ls[[k]]$C)
+#   Rho = sapply(Results, function(ls) ls[[k]]$Rho)
+#   I.max = sapply(Results, function(ls) max(ls[[k]]$Range))
+#   I.min = sapply(Results, function(ls) min(ls[[k]]$Range))
+#   I.sd = sapply(Results, function(ls) ls[[k]]$I.sd)
+#   I.scaled = Morans.I / I.max
+#   I.scaled2 = 2 * (Morans.I - I.min)/(I.max - I.min) - 1
+#   I.z = Morans.I / I.sd
+#   res <- data.frame(RsqAdj=RsqAdj, RsqAdjPos=RsqAdjPos, Rsq=Rsq, Morans.I=Morans.I, C=C, Rho=Rho,
+#                     I.max=I.max, I.min=I.min, I.scaled=I.scaled, I.scaled2=I.scaled2, I.z=I.z)
+# }
+```
+
+Note: revised function!
+```{r}
 getRes <- function(Results=Results, k = 1)
 {
-  RsqAdj = sapply(Results, function(ls) ls[[k]]$RsqAdj)
+  #RsqAdj = sapply(Results, function(ls) ls[[k]]$RsqAdj)
+  S.tot = sapply(Results, function(ls) ls[[k]]$S.tot)
+  S.min = sapply(Results, function(ls) ls[[k]]$S.min)
   RsqAdjPos = sapply(Results, function(ls) ls[[k]]$RsqAdjPos)
-  Rsq = sapply(Results, function(ls) ls[[k]]$Rsq)
+  #Rsq = sapply(Results, function(ls) ls[[k]]$Rsq)
   Morans.I = sapply(Results, function(ls) ls[[k]]$Morans.I)
   C = sapply(Results, function(ls) ls[[k]]$C)
   Rho = sapply(Results, function(ls) ls[[k]]$Rho)
   I.max = sapply(Results, function(ls) max(ls[[k]]$Range))
   I.min = sapply(Results, function(ls) min(ls[[k]]$Range))
-  I.sd = sapply(Results, function(ls) ls[[k]]$I.sd)
+  #I.sd = sapply(Results, function(ls) ls[[k]]$I.sd)
   I.scaled = Morans.I / I.max
   I.scaled2 = 2 * (Morans.I - I.min)/(I.max - I.min) - 1
-  I.z = Morans.I / I.sd
-  res <- data.frame(RsqAdj=RsqAdj, RsqAdjPos=RsqAdjPos, Rsq=Rsq, Morans.I=Morans.I, C=C, Rho=Rho,
-                    I.max=I.max, I.min=I.min, I.scaled=I.scaled, I.scaled2=I.scaled2, I.z=I.z)
+  #I.z = Morans.I / I.sd
+  #res <- data.frame(RsqAdj=RsqAdj, RsqAdjPos=RsqAdjPos, Rsq=Rsq, Morans.I=Morans.I, C=C, Rho=Rho,
+  #                  I.max=I.max, I.min=I.min, I.scaled=I.scaled, I.scaled2=I.scaled2, I.z=I.z)
+  res <- data.frame(S.tot=S.tot, S.min=S.min, RsqAdjPos=RsqAdjPos, Morans.I=Morans.I, C=C, Rho=Rho,
+                    I.max=I.max, I.min=I.min, I.scaled=I.scaled, I.scaled2=I.scaled2)
 }
 ```
+
 
 Combine response variables with Design matrix
 
@@ -775,6 +865,8 @@ data.frame(I.max.30, I.min.30)
 ### a) Effect of Demography
 
 ```{r fig.height=5, fig.width=8}
+#Results.subsets.table <- readRDS(paste0(here::here(), "/output/Results.subsets.table.rds"))
+
 par(mfrow=c(2,4))
 with(Results.subsets.table, boxplot(Fst.RsqAdjPos.90 ~ Demography,
      main="Fst.RsqAdjPos", ylim=c(0,1)))
@@ -935,6 +1027,42 @@ par(mfrow=c(1,1))
 - Measures also non-spatial structure (IM model has similar Fst as 2R). In IM model, populations are differentiated but nearby populations are not more similar than distant ones.
 - Why does 2R have lower Fst than 1R and IM?
 
+
+## By number of individuals
+
+```{r fig.height=9, fig.width=5}
+par(mfrow=c(4,2))
+
+with(Results.subsets.table[Results.subsets.table$Demography == "1R",], 
+     boxplot(Fst.30.m ~ as.character(NumInd),
+     main="Fst.30 (1R)", ylim=c(0.011,0.015)), xlab="NumInd")
+with(Results.subsets.table[Results.subsets.table$Demography == "1R",], 
+     boxplot(Fst.90 ~  as.character(NumInd),
+     main="Fst.90 (1R)", ylim=c(0.011,0.015)), xlab="NumInd")
+
+with(Results.subsets.table[Results.subsets.table$Demography == "2R",], 
+     boxplot(Fst.30.m ~ as.character(NumInd),
+     main="Fst.30 (2R)", ylim=c(0.011,0.015)), xlab="NumInd")
+with(Results.subsets.table[Results.subsets.table$Demography == "2R",], 
+     boxplot(Fst.90 ~ as.character(NumInd),
+     main="Fst.90 (2R)", ylim=c(0.011,0.015)), xlab="NumInd")
+
+with(Results.subsets.table[Results.subsets.table$Demography == "IBD",], 
+     boxplot(Fst.30.m ~ as.character(NumInd),
+     main="Fst.30 (IBD)", ylim=c(0.011,0.015)), xlab="NumInd")
+with(Results.subsets.table[Results.subsets.table$Demography == "IBD",], 
+     boxplot(Fst.90 ~ as.character(NumInd),
+     main="Fst.90 (IBD)", ylim=c(0.011,0.015)), xlab="NumInd")
+
+with(Results.subsets.table[Results.subsets.table$Demography == "IM",], 
+     boxplot(Fst.30.m ~ as.character(NumInd),
+     main="Fst.30 (IM)", ylim=c(0.011,0.015)), xlab="NumInd")
+with(Results.subsets.table[Results.subsets.table$Demography == "IM",], 
+     boxplot(Fst.90 ~ as.character(NumInd),
+     main="Fst.90 (IM)", ylim=c(0.011,0.015)), xlab="NumInd")
+
+par(mfrow=c(1,1))
+```
 
 ### b) Compare response variables 
 
@@ -1134,6 +1262,339 @@ with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.
 
 ```
 
+# add the 90s for contrast
+
+
+## 8. Missing sites
+
+Simulations to compare results between full sample and sample with some missing sites. Two possible methods:
+
+- Redo MEMgene (including MEM) for each dataset, based on available sites
+- Keep MEM, do adj R2 based on positive MEM, which avoids overfitting
+
+### a) Leave X sites out at a time
+
+Run function in parallel:
+
+```{r MEMgeneDrop}
+start_time <- Sys.time()
+
+Index.j <- 1:length(Sites.R.90)
+R = 10
+Results.drop <- rep( list(list()), R)
+
+set.seed(297)
+Drop <-lapply(c(1:R), function(r) sort(sample(1:90, 30)))
+
+for(r in 1:R)
+{
+  cat(r)
+  Results.drop[[r]] <- mclapply(Index.j, function(j) getMEMgene(j, Dgen = Dgen.R.90,
+                                                       subset=NULL, drop=Drop[[r]]),
+                                mc.cores=detectCores())
+  names(Results.drop[[r]]) <- Sites.R.90
+}
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Results.drop, paste0(here::here(), "/output/Results.drop.rds"))
+```
+
+Repeat with refitting MEM
+
+```{r MEMgeneDrop}
+start_time <- Sys.time()
+
+Index.j <- 1:length(Sites.R.90)
+R = 10
+Results.drop.MEM <- rep( list(list()), R)
+
+for(r in 1:R)
+{
+  cat(r)
+  Results.drop.MEM[[r]] <- mclapply(Index.j, function(j) getMEMgene(j, Dgen = Dgen.R.90,
+                                                       subset=c(1:90)[-Drop[[r]]], drop=NULL),
+                                mc.cores=detectCores())
+  names(Results.drop.MEM[[r]]) <- Sites.R.90
+}
+
+end_time <- Sys.time()
+end_time - start_time
+cat("This job took", (end_time - start_time)/length(Index.j), "per dataset.")
+
+saveRDS(Results.drop.MEM, paste0(here::here(), "/output/Results.drop.MEM.rds"))
+```
+
+### b) Compile results with dropped sites
+
+Determine mean and sdev among the R = 10 replicate subsets for each dataset with 5 sites dropped
+
+```{r}
+Results.drop <- readRDS(paste0(here::here(), "/output/Results.drop.rds"))
+Results.subsets.table <-  readRDS(paste0(here::here(), "/output/Results.subsets.table.rds"))
+```
+
+
+```{r}
+res.r <- lapply(Results.drop, function(sub) 
+  lapply(c(1:length(Results.drop[[1]][[1]])), function(k) getRes(sub, k)))
+
+tmp <- list()
+for(k in 1:length(res.r[[1]]))
+  {
+    S.tot.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$S.tot), 1, mean)
+    S.tot.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$S.tot), 1, sd)
+    RsqAdjPos.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$RsqAdjPos), 1, mean)
+    RsqAdjPos.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$RsqAdjPos), 1, sd)
+    Morans.I.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, mean)
+    Morans.I.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, sd)
+    C.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, mean)
+    C.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, sd)
+    Rho.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, mean)
+    Rho.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, sd)
+    I.scaled.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled), 1, mean)
+    I.scaled.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled), 1, sd)
+    I.scaled2.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled2), 1, mean)
+    I.scaled2.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled2), 1, sd)
+  
+    tmp[[k]] <- data.frame(S.tot.drop.m=S.tot.drop.m, S.tot.drop.s=S.tot.drop.s,
+                           RsqAdjPos.drop.m=RsqAdjPos.drop.m, RsqAdjPos.drop.s=RsqAdjPos.drop.s, 
+                           Morans.I.drop.m=Morans.I.drop.m, Morans.I.drop.s=Morans.I.drop.s,
+                           C.drop.m=C.drop.m, C.drop.s=C.drop.s, Rho.drop.m=Rho.drop.m, Rho.drop.s=Rho.drop.s,
+                           I.scaled.drop.m=I.scaled.drop.m, I.scaled.drop.s=I.scaled.drop.s,
+                           I.scaled2.drop.m=I.scaled2.drop.m, I.scaled2.drop.s=I.scaled2.drop.s)
+}
+
+res.r.combined <- Reduce(cbind, tmp)
+
+names(res.r.combined) <- paste(rep(names(Results.drop[[1]][[1]]), each=ncol(tmp[[1]])), 
+                             names(tmp[[1]]), sep=".")
+
+Results.drop.table <- data.frame(Results.subsets.table, res.r.combined)
+saveRDS(Results.drop.table, paste0(here::here(), "/output/Results.drop.table.rds"))
+Results.drop.table
+```
+
+Determine mean and sdev among the R = 10 replicate subsets for each dataset with 5 sites dropped
+
+```{r}
+Results.drop.MEM <- readRDS(paste0(here::here(), "/output/Results.drop.MEM.rds"))
+Results.drop.table <-  readRDS(paste0(here::here(), "/output/Results.drop.table.rds"))
+```
+
+Repeat with refitted MEM
+
+```{r}
+res.r <- lapply(Results.drop.MEM, function(sub) 
+  lapply(c(1:length(Results.drop[[1]][[1]])), function(k) getRes(sub, k)))
+
+tmp <- list()
+for(k in 1:length(res.r[[1]]))
+  {
+    S.tot.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$S.tot), 1, mean)
+    S.tot.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$S.tot), 1, sd)
+    RsqAdjPos.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$RsqAdjPos), 1, mean)
+    RsqAdjPos.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$RsqAdjPos), 1, sd)
+    Morans.I.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, mean)
+    Morans.I.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, sd)
+    C.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, mean)
+    C.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, sd)
+    Rho.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, mean)
+    Rho.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, sd)
+    I.scaled.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled), 1, mean)
+    I.scaled.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled), 1, sd)
+    I.scaled2.drop.m <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled2), 1, mean)
+    I.scaled2.drop.s <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled2), 1, sd)
+  
+    tmp[[k]] <- data.frame(S.tot.drop.MEM.m=S.tot.drop.m, S.tot.drop.MEM.s=S.tot.drop.s,
+                           RsqAdjPos.drop.MEM.m=RsqAdjPos.drop.m, RsqAdjPos.drop.MEM.s=RsqAdjPos.drop.s, 
+                           Morans.I.drop.MEM.m=Morans.I.drop.m, Morans.I.drop.MEM.s=Morans.I.drop.s,
+                           C.drop.MEM.m=C.drop.m, C.drop.MEM.s=C.drop.s, 
+                           Rho.drop.MEM.m=Rho.drop.m, Rho.drop.MEM.s=Rho.drop.s,
+                           I.scaled.drop.MEM.m=I.scaled.drop.m, I.scaled.drop.MEM.s=I.scaled.drop.s,
+                           I.scaled2.drop.MEM.m=I.scaled2.drop.m, I.scaled2.drop.MEM.s=I.scaled2.drop.s)
+}
+
+res.r.combined <- Reduce(cbind, tmp)
+
+names(res.r.combined) <- paste(rep(names(Results.drop[[1]][[1]]), each=ncol(tmp[[1]])), 
+                             names(tmp[[1]]), sep=".")
+
+Results.drop.MEM.table <- data.frame(Results.drop.table, res.r.combined)
+saveRDS(Results.drop.MEM.table, paste0(here::here(), "/output/Results.drop.MEM.table.rds"))
+Results.drop.MEM.table
+```
+
+
+Get maximum possible Moran's I for each subsample (same for all 90 datasets):
+
+```{r}
+I.max.drop <- sapply(Results.drop, function(sub) max(sub[[1]][[1]]$Range))
+I.min.drop <- sapply(Results.drop, function(sub) min(sub[[1]][[1]]$Range))
+I.max.drop.MEM <- sapply(Results.drop.MEM, function(sub) max(sub[[1]][[1]]$Range))
+I.min.drop.MEM <- sapply(Results.drop.MEM, function(sub) min(sub[[1]][[1]]$Range))
+data.frame(I.max.drop, I.min.drop, I.max.drop.MEM, I.min.drop.MEM)
+```
+```{r}
+mean(I.max.drop.MEM)
+mean(I.min.drop.MEM)
+```
+
+```{r}
+#Results.drop.MEM.table$Fst.RsqAdjPos.drop.m/Results.drop.MEM.table$Fst.RsqAdjPos.90
+#Results.drop.MEM.table$Fst.RsqAdjPos.drop.MEM.m/Results.drop.MEM.table$Fst.RsqAdjPos.90
+#Results.drop.MEM.table$Fst.Morans.I.drop.m/Results.drop.MEM.table$Fst.Morans.I.90
+#Results.drop.MEM.table$Fst.RsqAdjPos.drop.m/Results.drop.MEM.table$Fst.RsqAdjPos.90
+#Results.drop.MEM.table$Fst.Morans.I.drop.m/Results.drop.MEM.table$Fst.Morans.I.90
+
+par(mfrow=c(1,2))
+with(Results.drop.MEM.table, boxplot(data.frame(Fst.RsqAdjPos.drop.MEM.m, Fst.RsqAdjPos.drop.m, Fst.RsqAdjPos.90),
+                                     ylab="Fst.RsqAdjPos"))
+with(Results.drop.MEM.table, boxplot(data.frame(Fst.Morans.I.drop.MEM.m, Fst.Morans.I.drop.m, Fst.Morans.I.90),
+                                     ylab="Fst.Morans.I"))
+par(mfrow=c(1,1))
+
+#tmp <- lapply(c(1:length(Results.drop[[1]][[1]])), function(k) getRes(Results.drop[[1]], k))[[1]]
+#tmp$RsqAdjPos / Results.table$Fst.RsqAdjPos.90
+#tmp$Morans.I / Results.table$Fst.Morans.I.90
+```
+
+```{r}
+par(mfrow=c(1,2))
+with(Results.drop.MEM.table[Results.drop.MEM.table$Demography != "IM",], 
+     boxplot(data.frame(Drop.MEM = Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90, 
+                        Drop = Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90),
+                        ylab="Fst.RsqAdjPos", ylim=c(0, 1)))
+with(Results.drop.MEM.table[Results.drop.MEM.table$Demography != "IM",], 
+     boxplot(data.frame(Drop.MEM = Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90, 
+                        Drop = Fst.Morans.I.drop.m / Fst.Morans.I.90),
+                        ylab="Fst.Morans.I", ylim=c(0, 1)))
+par(mfrow=c(1,1))
+```
+
+
+```{r}
+par(mfrow=c(2,3))
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R"), 
+     boxplot(data.frame(Drop.MEM=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+                        Drop=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90),
+             ylab="AdjRsqPos", main="1R", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R"), 
+     boxplot(data.frame(Drop.MEM=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+                        Drop=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90),
+             ylab="AdjRsqPos", main="2R", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD"), 
+     boxplot(data.frame(Drop.MEM=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+                        Drop=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90),
+             ylab="AdjRsqPos", main="IBD", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R"), 
+     boxplot(data.frame(Drop.MEM=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+                        Drop=Fst.Morans.I.drop.m / Fst.Morans.I.90),
+             ylab="Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R"), 
+     boxplot(data.frame(Drop.MEM=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+                        Drop=Fst.Morans.I.drop.m / Fst.Morans.I.90),
+             ylab="Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD"), 
+     boxplot(data.frame(Drop.MEM=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+                        Drop=Fst.Morans.I.drop.m / Fst.Morans.I.90),
+             ylab="Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+par(mfrow=c(1,1))
+```
+ Statistical tests
+ 
+```{r}
+with(Results.drop5.table %>% filter(Demography == "1R"), 
+     t.test(Fst.RsqAdjPos.drop.m, Fst.RsqAdjPos.90, paired=TRUE))
+
+with(Results.drop5.table %>% filter(Demography == "2R"), 
+     t.test(Fst.RsqAdjPos.drop.m, Fst.RsqAdjPos.90, paired=TRUE))
+
+with(Results.drop5.table %>% filter(Demography == "IBD"), 
+     t.test(Fst.RsqAdjPos.drop.m, Fst.RsqAdjPos.90, paired=TRUE))
+
+with(Results.drop5.table %>% filter(Demography == "1R"), 
+     t.test(Fst.Morans.I.drop.m, Fst.Morans.I.90, paired=TRUE))
+
+with(Results.drop5.table %>% filter(Demography == "2R"), 
+     t.test(Fst.Morans.I.drop.m, Fst.Morans.I.90, paired=TRUE))
+
+with(Results.drop5.table %>% filter(Demography == "IBD"), 
+     t.test(Fst.Morans.I.drop.m, Fst.Morans.I.90, paired=TRUE))
+```
+ 
+ Effect sizes:
+ 
+```{r}
+Diff <- with(Results.drop5.table %>% filter(Demography == "1R"), 
+     Fst.RsqAdjPos.drop.m - Fst.RsqAdjPos.90)
+mean(Diff) / sd(Diff)
+
+Diff <- with(Results.drop5.table %>% filter(Demography == "2R"), 
+     Fst.RsqAdjPos.drop.m - Fst.RsqAdjPos.90)
+mean(Diff) / sd(Diff)
+
+Diff <- with(Results.drop5.table %>% filter(Demography == "IBD"), 
+     Fst.RsqAdjPos.drop.m - Fst.RsqAdjPos.90)
+mean(Diff) / sd(Diff)
+
+Diff <- with(Results.drop5.table %>% filter(Demography == "1R"), 
+     Fst.Morans.I.drop.m - Fst.Morans.I.90)
+mean(Diff) / sd(Diff)
+
+Diff <- with(Results.drop5.table %>% filter(Demography == "2R"), 
+     Fst.Morans.I.drop.m - Fst.Morans.I.90)
+mean(Diff) / sd(Diff)
+
+Diff <- with(Results.drop5.table %>% filter(Demography == "IBD"), 
+     Fst.Morans.I.drop.m - Fst.Morans.I.90)
+mean(Diff) / sd(Diff)
+```
+ 
+
+
+```{r}
+#Results.drop5.table <- readRDS(paste0(here::here(), "/output/Results.drop5.table.rds"))
+```
+
+
+## 9. Check for nonrandom genotypes (6 vs 20 individuals)
+
+Look at the first 10 loci for Pop 1
+
+```{r}
+Data.R.90[[1]][1:20,1:11]
+```
+
+```{r}
+Data.R.90[[2]][1:6,1:11]
+```
+
+Compare mean allele frequency across all loci among the 20 indidividuals
+
+```{r}
+par(mfrow=c(1,2))
+plot(apply(Data.R.90[[1]][1:20,-1],1,mean))
+plot(apply(Data.R.90[[2]][1:6,-1],1,mean))
+par(mfrow=c(1,1))
+```
+=======
+
 ## 8. Summary Interaction Plots
 
 ### a) With n=90, #IND= 20 & the 9900 loci: Difference demographies in response variabe (Fst, adjusted R^2 and Moran's I).
@@ -1177,8 +1638,6 @@ with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Scaled.Morans.I
 # 3- Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
 # Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
 ```
-
-
 
 
 
