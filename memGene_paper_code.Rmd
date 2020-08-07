@@ -1261,6 +1261,7 @@ with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.
 with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.RsqAdjPos.30.500.m)})
 
 ```
+
 # add the 90s for contrast
 
 
@@ -1592,4 +1593,51 @@ plot(apply(Data.R.90[[1]][1:20,-1],1,mean))
 plot(apply(Data.R.90[[2]][1:6,-1],1,mean))
 par(mfrow=c(1,1))
 ```
+=======
+
+## 8. Summary Interaction Plots
+
+### a) With n=90, #IND= 20 & the 9900 loci: Difference demographies in response variabe (Fst, adjusted R^2 and Moran's I).
+
+```{r fig.height=3, fig.width=6}
+par(mfcol=c(1,3))
+b <- which(Results.subsets.table$NumInd == 20)
+with(Results.subsets.table[b,], boxplot(Fst.90 ~ Demography,
+     main="Fst.90 (9900 loci)", ylim=c(0.011,0.015)))
+
+with(Results.subsets.table[b,], boxplot(Fst.RsqAdj.90 ~ Demography,
+     main="R^2.Adj.90 (9900 loci)", ylim=c(0.0,0.7)))
+
+with(Results.subsets.table[b,], boxplot(Fst.Morans.I.90 ~ Demography,
+     main="Morans.I.90 (9900 loci)", ylim=c(0.0,0.7)))
+
+```
+
+### b) With n=90 and removing IM: Interaction between #Ind (20, 6) and # Loci (9900, 3300, 500) in response variabe (Fst, adjusted R^2,  Moran's I, and Scaled MI).
+
+
+```{r fig.height=3, fig.width=10}
+#Results.subsets.mutate <- cbind(as.character(Demography), NumPops, as.character(NumInd), Fst.90, Fst.90.3, Fst.90.500, Fst.RsqAdjPos.90, Fst.Morans.I.90, Fst.I.scaled.90, Fst.RsqAdjPos.90.3, Fst.Morans.I.90.3, Fst.I.scaled.90.3, Fst.RsqAdjPos.90.500, Fst.Morans.I.90.500, Fst.I.scaled.90.500)
+
+Results.sub.long <- read.csv('Results.mutated.csv', header= T, sep=',')
+noIM <- which(Results.sub.long$Demography != "IM")
+
+par(mfcol=c(1,4))
+with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Fst, col=c("red","green","blue"), main = "Fst")})
+with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Adj.Rsqr.Pos, col=c("red","green","blue"), main = "Adjusted R^2 Positive")})
+with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Morans.I, col=c("red","green","blue"), main = "Moran's I")})
+with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Scaled.Morans.I, col=c("red","green","blue"), main = "Scaled Moran's I")})
+# 
+# 3- Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
+# Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
+```
+
+
+```{r}
+
+# 3- Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
+# Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
+```
+
+
 
