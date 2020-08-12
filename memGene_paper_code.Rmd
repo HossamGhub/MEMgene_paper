@@ -1627,16 +1627,84 @@ with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Fst, col=c("red
 with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Adj.Rsqr.Pos, col=c("red","green","blue"), main = "Adjusted R^2 Positive")})
 with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Morans.I, col=c("red","green","blue"), main = "Moran's I")})
 with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Scaled.Morans.I, col=c("red","green","blue"), main = "Scaled Moran's I")})
-# 
-# 3- Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
-# Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
+
 ```
 
 
-```{r}
-
+```{r fig.height=6, fig.width=7}
+# 
 # 3- Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
 # Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
+
+par(mfrow=c(3,3))
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+                        Drop=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
+                        Drop.MEM.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
+             ylab="AdjRsqPos", main="1R", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+                        Drop=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
+                        Drop.MEM.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
+             ylab="AdjRsqPos", main="2R", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+                        Drop=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
+                        Drop.MEM.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
+             ylab="AdjRsqPos", main="IBD", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+                        Drop=Fst.Morans.I.drop.m / Fst.Morans.I.90,
+                        Drop.MEM.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
+             ylab="Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+                        Drop=Fst.Morans.I.drop.m / Fst.Morans.I.90,
+                        Drop.MEM.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
+             ylab="Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+                        Drop=Fst.Morans.I.drop.m / Fst.Morans.I.90,
+                        Drop.MEM.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
+             ylab="Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
+                        Drop=Fst.I.scaled.drop.m / Fst.I.scaled.90,
+                        Drop.MEM.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
+             ylab="Scaled.Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
+                        Drop=Fst.I.scaled.drop.m / Fst.I.scaled.90,
+                        Drop.MEM.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
+             ylab="Scaled.Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+     boxplot(data.frame(Drop.MEM=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
+                        Drop=Fst.I.scaled.drop.m / Fst.I.scaled.90,
+                        Drop.MEM.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
+             ylab="Scaled.Morans.I", ylim=c(0.5,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+par(mfrow=c(1,1))
+
 ```
 
 
