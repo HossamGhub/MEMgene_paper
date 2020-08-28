@@ -1606,7 +1606,7 @@ Results.subsets.table$Demography <- factor(Results.subsets.table$Demography, lev
 with(Results.subsets.table[b,], boxplot(Fst.90 ~ Demography, ylim=c(0.0,0.015), ylab="Fst", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
 title("(a)", adj = 0, line =1, cex.main=2 )
 
-with(Results.subsets.table[b,], boxplot(Fst.RsqAdj.90 ~ Demography, ylim=c(0.0,0.7), ylab=expression("Adjusted R "^2), cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+with(Results.subsets.table[b,], boxplot(Fst.RsqAdjPos.90 ~ Demography, ylim=c(0.0,0.7), ylab=expression("Adjusted R "^2), cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
 title("(b)", adj = 0, line =1, cex.main=2 )
 
 with(Results.subsets.table[b,], boxplot(Fst.Morans.I.90 ~ Demography, ylim=c(0.0,0.7), ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
@@ -1635,11 +1635,10 @@ with(Results.sub.long[noIM,], {interaction.plot(NumInd, NumLoci, Morans.I, col=c
 title("(c)", adj = 0, line =1, cex.main=2 )
 ```
 
+### c) Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
+# Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
 
 ```{r fig.height=6, fig.width=6}
-# 
-# 3- Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
-# Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
 
 par(mfrow=c(3,3), mar = c(3, 5, 4, 1))
 
@@ -1713,4 +1712,122 @@ par(mfrow=c(1,1))
 ```
 
 
+=======
 
+## 9. Interaction Plots for sublimentary material using the Dch as a measure for genetic distance
+
+### a) With n=90, #IND= 20 & the 9900 loci: Difference demographies in response variabe (Dch, adjusted R^2 and Moran's I).
+
+```{r fig.height=2.5, fig.width=6}
+par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
+b <- which(Results.subsets.table$NumInd == 20)
+Results.subsets.table$Demography <- factor(Results.subsets.table$Demography, levels = c("IM", "IBD", "1R", "2R"))
+with(Results.subsets.table[b,], boxplot(Dch.C.90 ~ Demography, ylim=c(0.0,1.0), ylab="Dch", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+title("(a)", adj = 0, line =1, cex.main=2 )
+
+with(Results.subsets.table[b,], boxplot(Dch.RsqAdjPos.90 ~ Demography, ylim=c(0.0,1.0), ylab=expression("Dch adjusted R "^2), cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+title("(b)", adj = 0, line =1, cex.main=2 )
+
+with(Results.subsets.table[b,], boxplot(Dch.Morans.I.90 ~ Demography, ylim=c(0.0,1.0), ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+title("(c)", adj = 0, line =1, cex.main=2  )
+
+```
+
+### b) With n=90 and removing IM: Interaction between #Ind (20, 6) and # Loci (9900, 3300, 500) in response variabe (Dch, adjusted R^2, and Moran's I).
+
+
+```{r fig.height=2.5, fig.width=6}
+# attach(Results.subsets.table)
+# Results.subsets.mutate.Dch <- cbind(as.character(Demography), NumPops, as.character(NumInd), Dch.C.90, Dch.C.90.3, Dch.C.90.500, Dch.RsqAdjPos.90, Dch.Morans.I.90, Dch.I.scaled.90, Dch.RsqAdjPos.90.3, Dch.Morans.I.90.3, Dch.I.scaled.90.3, Dch.RsqAdjPos.90.500, Dch.Morans.I.90.500, Dch.I.scaled.90.500)
+# write.table(Results.subsets.mutate.Dch, 'Results.mutated.Dch.csv', sep=',' )
+
+Results.sub.long.Dch <- read.csv('Results.mutated.Dch.long.csv', header= T, sep=',')
+Results.sub.long.Dch$NumLoci <- factor(Results.sub.long.Dch$NumLoci, levels = c("500", "3300", "9900"))
+noIM <- which(Results.sub.long.Dch$Demography != "IM")
+
+par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
+with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Dch, col=c("grey1","grey20","grey50"), ylab=" mean Dch", ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
+title("(a)", adj = 0, line =1, cex.main=2 )
+
+with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Adj.Rsqr.Pos, col=c("grey1","grey20","grey50"), ylab=expression("mean Dch adjusted R"^2), ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
+title("(b)", adj = 0, line =1, cex.main=2 )
+
+with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Morans.I, col=c("grey1","grey20","grey50"), ylab="mean Dch Moran's I", ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
+title("(c)", adj = 0, line =1, cex.main=2 )
+```
+
+### c) Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
+# Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
+
+```{r fig.height=6, fig.width=6}
+
+par(mfrow=c(3,3), mar = c(3, 5, 4, 1))
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
+                        Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
+                        Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
+             ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="IBD", cex.main= 2, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
+                        Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
+                        Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
+             ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="1R", cex.main=2,  ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
+                        Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
+                        Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
+             ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="2R", cex.main=2, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
+                        Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
+                        Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
+             ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
+                        Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
+                        Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
+             ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
+                        Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
+                        Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
+             ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+
+with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
+                        Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
+                        Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
+             ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
+                        Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
+                        Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
+             ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+     boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
+                        Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
+                        Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
+             ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+lines(c(0,10), c(1,1), lty=2)
+
+par(mfrow=c(1,1))
+
+```
