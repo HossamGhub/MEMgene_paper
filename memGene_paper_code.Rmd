@@ -1595,22 +1595,66 @@ par(mfrow=c(1,1))
 ```
 =======
 
-## 8. Summary Interaction Plots
+## 10. Summary Interaction Plots
 
 ### a) With n=90, #IND= 20 & the 9900 loci: Difference demographies in response variabe (Fst, adjusted R^2 and Moran's I).
 
 ```{r fig.height=2.5, fig.width=6}
-par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
+library("rcompanion")
+library("ggpubr")
+library("ggplot2")
+
 b <- which(Results.subsets.table$NumInd == 20)
 Results.subsets.table$Demography <- factor(Results.subsets.table$Demography, levels = c("IM", "IBD", "1R", "2R"))
-with(Results.subsets.table[b,], boxplot(Fst.90 ~ Demography, ylim=c(0.0,0.015), ylab="Fst", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
-title("(a)", adj = 0, line =1, cex.main=2 )
 
-with(Results.subsets.table[b,], boxplot(Fst.RsqAdjPos.90 ~ Demography, ylim=c(0.0,0.7), ylab=expression("Adjusted R "^2), cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
-title("(b)", adj = 0, line =1, cex.main=2 )
+Sum1.p <- groupwiseMean(Fst.90 ~ Demography, data = Results.subsets.table[b,], conf   = 0.95, digits = 3)
+Pan.a.p<- ggplot(Sum1.p, aes(x = Demography, y = Mean)) + ylim(0.0,0.015) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("(a)") + xlab("Demography") + ylab("Fst") +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold"),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
 
-with(Results.subsets.table[b,], boxplot(Fst.Morans.I.90 ~ Demography, ylim=c(0.0,0.7), ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
-title("(c)", adj = 0, line =1, cex.main=2  )
+Sum2.p <- groupwiseMean(Fst.RsqAdjPos.90 ~ Demography, data = Results.subsets.table[b,], conf   = 0.95, digits = 3)
+Pan.b.p<- ggplot(Sum2.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("(b)") + xlab("Demography") + ylab(expression(bold('Fst adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold"),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+Sum3.p <- groupwiseMean(Fst.Morans.I.90 ~ Demography, data = Results.subsets.table[b,], conf   = 0.95, digits = 3)
+Pan.c.p<- ggplot(Sum3.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("(c)") + xlab("Demography") + ylab("Fst Moran's I") +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold"),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+figure.1.P <- ggarrange(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1)
+figure.1.P
+
+
+#OLD code with boxplot figure
+# with(Results.subsets.table[b,], boxplot(Fst.90 ~ Demography, ylim=c(0.0,0.015), ylab="Fst", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+# title("(a)", adj = 0, line =1, cex.main=2 )
+# 
+# with(Results.subsets.table[b,], boxplot(Fst.RsqAdjPos.90 ~ Demography, ylim=c(0.0,0.7), ylab=expression("Adjusted R "^2), cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+# title("(b)", adj = 0, line =1, cex.main=2 )
+# 
+# with(Results.subsets.table[b,], boxplot(Fst.Morans.I.90 ~ Demography, ylim=c(0.0,0.7), ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+# title("(c)", adj = 0, line =1, cex.main=2  )
 
 ```
 
@@ -1640,194 +1684,520 @@ title("(c)", adj = 0, line =1, cex.main=2 )
 
 ```{r fig.height=6, fig.width=6}
 
-par(mfrow=c(3,3), mar = c(3, 5, 4, 1))
+library(tidyr)
 
-with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
-                        Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
-                        Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
-             ylab=expression("Adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="IBD", cex.main= 2, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
+# Fst Adjusted Rsq.
 
-with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
-                        Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
-                        Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
-             ylab=expression("Adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="1R", cex.main=2,  ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
+D11<- with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90, Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90, Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90)) 
+D11<- gather(D11, "Comparison", "Fst.Rsq")
+D11.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D11, conf   = 0.95, digits = 3)
+D11.s$Comparison <- factor(D11.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D11.a.s<- ggplot(D11.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("IBD") + xlab("Comparison") + ylab(expression(bold('Fst adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold", hjust = 0.5),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
 
-with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
-                        Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
-                        Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
-             ylab=expression("Adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="2R", cex.main=2, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
+D22<- with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90, Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90, Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90)) 
+D22<- gather(D22, "Comparison", "Fst.Rsq")
+D22.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D22, conf   = 0.95, digits = 3)
+D22.s$Comparison <- factor(D22.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D22.a.s<- ggplot(D22.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("1R") + xlab("Comparison") + ylab(expression(bold('Fst adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold", hjust = 0.5),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D33<- with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90, Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90, Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90)) 
+D33<- gather(D33, "Comparison", "Fst.Rsq")
+D33.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D33, conf   = 0.95, digits = 3)
+D33.s$Comparison <- factor(D33.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D33.a.s<- ggplot(D33.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("2R") + xlab("Comparison") + ylab(expression(bold('Fst adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold", hjust = 0.5),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+# Dch Mora's I
+
+D44<- with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90, Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90, Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90)) 
+D44<- gather(D44, "Comparison", "Fst.Rsq")
+D44.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D44, conf   = 0.95, digits = 3)
+D44.s$Comparison <- factor(D44.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D44.a.s<- ggplot(D44.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Fst Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D55<- with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90, Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90, Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90)) 
+D55<- gather(D55, "Comparison", "Fst.Rsq")
+D55.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D55, conf   = 0.95, digits = 3)
+D55.s$Comparison <- factor(D55.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D55.a.s<- ggplot(D55.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Fst Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D66<- with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90, Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90, Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90)) 
+D66<- gather(D66, "Comparison", "Fst.Rsq")
+D66.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D66, conf   = 0.95, digits = 3)
+D66.s$Comparison <- factor(D66.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D66.a.s<- ggplot(D66.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Fst Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+# Scaled Moran's I
+
+D77<- with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,  Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90, Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90)) 
+D77<- gather(D77, "Comparison", "Fst.Rsq")
+D77.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D77, conf   = 0.95, digits = 3)
+D77.s$Comparison <- factor(D77.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D77.a.s<- ggplot(D77.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Fst scaled Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D88<- with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,  Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90, Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90)) 
+D88<- gather(D88, "Comparison", "Fst.Rsq")
+D88.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D88, conf   = 0.95, digits = 3)
+D88.s$Comparison <- factor(D88.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D88.a.s<- ggplot(D88.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Fst scaled Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D99<- with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,  Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90, Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90)) 
+D99<- gather(D99, "Comparison", "Fst.Rsq")
+D99.s <- groupwiseMean(Fst.Rsq ~ Comparison, data =D99, conf   = 0.95, digits = 3)
+D99.s$Comparison <- factor(D99.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D99.a.s<- ggplot(D99.s, aes(x = Comparison, y = Mean)) + ylim(0,1.02) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Fst scaled Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+figure.3.P <- ggarrange(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3)
+figure.3.P
 
 
-with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90,
-                        Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
-                        Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
-             ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90,
-                        Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
-                        Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
-             ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90,
-                        Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
-                        Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
-             ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-
-with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,
-                        Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
-                        Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
-             ylab="Scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,
-                        Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
-                        Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
-             ylab="Scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,
-                        Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
-                        Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
-             ylab="Scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-par(mfrow=c(1,1))
+# OLD code with boxplots
+#
+# par(mfrow=c(3,3), mar = c(3, 5, 4, 1))
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
+#                         Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+#                         Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
+#              ylab=expression("Adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="IBD", cex.main= 2, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
+#                         Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+#                         Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
+#              ylab=expression("Adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="1R", cex.main=2,  ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.RsqAdjPos.drop.m / Fst.RsqAdjPos.90,
+#                         Meta.60=Fst.RsqAdjPos.drop.MEM.m / Fst.RsqAdjPos.90,
+#                         Meta.30=Fst.RsqAdjPos.30.m / Fst.RsqAdjPos.90),
+#              ylab=expression("Adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="2R", cex.main=2, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90,
+#                         Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+#                         Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
+#              ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90,
+#                         Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+#                         Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
+#              ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.Morans.I.drop.m / Fst.Morans.I.90,
+#                         Meta.60=Fst.Morans.I.drop.MEM.m / Fst.Morans.I.90,
+#                         Meta.30=Fst.Morans.I.30.m / Fst.Morans.I.90),
+#              ylab="Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,
+#                         Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
+#                         Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
+#              ylab="Scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,
+#                         Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
+#                         Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
+#              ylab="Scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Fst.I.scaled.drop.m / Fst.I.scaled.90,
+#                         Meta.60=Fst.I.scaled.drop.MEM.m / Fst.I.scaled.90,
+#                         Meta.30=Fst.I.scaled.30.m / Fst.I.scaled.90),
+#              ylab="Scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# par(mfrow=c(1,1))
 
 ```
 
 
 =======
 
-## 9. Interaction Plots for sublimentary material using the Dch as a measure for genetic distance
+## 11. Interaction Plots for sublimentary material using the Dch as a measure for genetic distance
 
 ### a) With n=90, #IND= 20 & the 9900 loci: Difference demographies in response variabe (Dch, adjusted R^2 and Moran's I).
 
 ```{r fig.height=2.5, fig.width=6}
-par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
+
 b <- which(Results.subsets.table$NumInd == 20)
 Results.subsets.table$Demography <- factor(Results.subsets.table$Demography, levels = c("IM", "IBD", "1R", "2R"))
-with(Results.subsets.table[b,], boxplot(Dch.C.90 ~ Demography, ylim=c(0.0,1.0), ylab="Dch", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
-title("(a)", adj = 0, line =1, cex.main=2 )
 
-with(Results.subsets.table[b,], boxplot(Dch.RsqAdjPos.90 ~ Demography, ylim=c(0.0,1.0), ylab=expression("Dch adjusted R "^2), cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
-title("(b)", adj = 0, line =1, cex.main=2 )
+Sum1.s <- groupwiseMean(Dch.C.90 ~ Demography, data = Results.subsets.table[b,], conf   = 0.95, digits = 3)
+Pan.a.s<- ggplot(Sum1.s, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("(a)") + xlab("Demography") + ylab("Dch") +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold"),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
 
-with(Results.subsets.table[b,], boxplot(Dch.Morans.I.90 ~ Demography, ylim=c(0.0,1.0), ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
-title("(c)", adj = 0, line =1, cex.main=2  )
+Sum2.s <- groupwiseMean(Dch.RsqAdjPos.90 ~ Demography, data = Results.subsets.table[b,], conf   = 0.95, digits = 3)
+Pan.b.s<- ggplot(Sum2.s, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("(b)") + xlab("Demography") + ylab(expression(bold('Dch adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold"),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+Sum3.s <- groupwiseMean(Dch.Morans.I.90 ~ Demography, data = Results.subsets.table[b,], conf   = 0.95, digits = 3)
+Pan.c.s<- ggplot(Sum3.s, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("(c)") + xlab("Demography") + ylab("Dch Moran's I") +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold"),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+figure.1.sup <- ggarrange(Pan.a.s, Pan.b.s, Pan.c.s, ncol = 3, nrow = 1)
+figure.1.sup
+
+# OLD Figure with boxplots
+# with(Results.subsets.table[b,], boxplot(Dch.C.90 ~ Demography, ylim=c(0.0,1.0), ylab="Dch", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+# title("(a)", adj = 0, line =1, cex.main=2 )
+# 
+# with(Results.subsets.table[b,], boxplot(Dch.RsqAdjPos.90 ~ Demography, ylim=c(0.0,1.0), ylab=expression("Dch adjusted R "^2), cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+# title("(b)", adj = 0, line =1, cex.main=2 )
+# 
+# with(Results.subsets.table[b,], boxplot(Dch.Morans.I.90 ~ Demography, ylim=c(0.0,1.0), ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, cex.sub=1.5))
+# title("(c)", adj = 0, line =1, cex.main=2  )
 
 ```
 
 ### b) With n=90 and removing IM: Interaction between #Ind (20, 6) and # Loci (9900, 3300, 500) in response variabe (Dch, adjusted R^2, and Moran's I).
 
 
-```{r fig.height=2.5, fig.width=6}
+```{r fig.height=6, fig.width=6}
+
+library(tidyr)
+
+# Dch Adjusted Rsq.
+
+D1<- with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90, Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90, Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90)) 
+D1<- gather(D1, "Comparison", "Dch.Rsq")
+D1.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D1, conf   = 0.95, digits = 3)
+D1.s$Comparison <- factor(D1.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D1.a.s<- ggplot(D1.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("IBD") + xlab("Comparison") + ylab(expression(bold('Dch adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold", hjust = 0.5),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D2<- with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90, Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90, Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90)) 
+D2<- gather(D2, "Comparison", "Dch.Rsq")
+D2.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D2, conf   = 0.95, digits = 3)
+D2.s$Comparison <- factor(D2.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D2.a.s<- ggplot(D2.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("1R") + xlab("Comparison") + ylab(expression(bold('Dch adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold", hjust = 0.5),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D3<- with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90, Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90, Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90)) 
+D3<- gather(D3, "Comparison", "Dch.Rsq")
+D3.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D3, conf   = 0.95, digits = 3)
+D3.s$Comparison <- factor(D3.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D3.a.s<- ggplot(D3.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    ggtitle("2R") + xlab("Comparison") + ylab(expression(bold('Dch adjusted R'^2))) +
+    theme(axis.text = element_text(size = 12),
+          plot.title = element_text(size=16, face="bold", hjust = 0.5),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+# Dch Mora's I
+
+D4<- with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90, Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90, Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90)) 
+D4<- gather(D4, "Comparison", "Dch.Rsq")
+D4.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D4, conf   = 0.95, digits = 3)
+D4.s$Comparison <- factor(D4.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D4.a.s<- ggplot(D4.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Dch Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D5<- with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90, Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90, Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90)) 
+D5<- gather(D5, "Comparison", "Dch.Rsq")
+D5.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D5, conf   = 0.95, digits = 3)
+D5.s$Comparison <- factor(D5.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D5.a.s<- ggplot(D5.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Dch Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D6<- with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90, Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90, Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90)) 
+D6<- gather(D6, "Comparison", "Dch.Rsq")
+D6.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D6, conf   = 0.95, digits = 3)
+D6.s$Comparison <- factor(D6.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D6.a.s<- ggplot(D6.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Dch Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+# Scaled Moran's I
+
+D7<- with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,  Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90, Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90)) 
+D7<- gather(D7, "Comparison", "Dch.Rsq")
+D7.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D7, conf   = 0.95, digits = 3)
+D7.s$Comparison <- factor(D7.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D7.a.s<- ggplot(D7.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Dch scaled Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D8<- with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,  Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90, Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90)) 
+D8<- gather(D8, "Comparison", "Dch.Rsq")
+D8.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D8, conf   = 0.95, digits = 3)
+D8.s$Comparison <- factor(D8.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D8.a.s<- ggplot(D8.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Dch scaled Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+D9<- with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,  Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90, Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90)) 
+D9<- gather(D9, "Comparison", "Dch.Rsq")
+D9.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D9, conf   = 0.95, digits = 3)
+D9.s$Comparison <- factor(D9.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
+D9.a.s<- ggplot(D9.s, aes(x = Comparison, y = Mean)) + ylim(0,1.02) +
+   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+   geom_point(shape = 1, size  = 2) +
+   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+   xlab("Comparison") + ylab("Dch scaled Mora's I") +
+    theme(axis.text = element_text(size = 12),
+          axis.title.x = element_text(size=12, face="bold"),
+          axis.title.y = element_text(size=12, face="bold")
+          )
+
+figure.3.sup <- ggarrange(D1.a.s, D2.a.s, D3.a.s, D4.a.s, D5.a.s, D6.a.s ,D7.a.s, D8.a.s, D9.a.s, ncol = 3, nrow = 3)
+figure.3.sup
+
+# OLD figure with boxplots 
+
 # attach(Results.subsets.table)
 # Results.subsets.mutate.Dch <- cbind(as.character(Demography), NumPops, as.character(NumInd), Dch.C.90, Dch.C.90.3, Dch.C.90.500, Dch.RsqAdjPos.90, Dch.Morans.I.90, Dch.I.scaled.90, Dch.RsqAdjPos.90.3, Dch.Morans.I.90.3, Dch.I.scaled.90.3, Dch.RsqAdjPos.90.500, Dch.Morans.I.90.500, Dch.I.scaled.90.500)
 # write.table(Results.subsets.mutate.Dch, 'Results.mutated.Dch.csv', sep=',' )
 
-Results.sub.long.Dch <- read.csv('Results.mutated.Dch.long.csv', header= T, sep=',')
-Results.sub.long.Dch$NumLoci <- factor(Results.sub.long.Dch$NumLoci, levels = c("500", "3300", "9900"))
-noIM <- which(Results.sub.long.Dch$Demography != "IM")
-
-par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
-with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Dch, col=c("grey1","grey20","grey50"), ylab=" mean Dch", ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
-title("(a)", adj = 0, line =1, cex.main=2 )
-
-with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Adj.Rsqr.Pos, col=c("grey1","grey20","grey50"), ylab=expression("mean Dch adjusted R"^2), ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
-title("(b)", adj = 0, line =1, cex.main=2 )
-
-with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Morans.I, col=c("grey1","grey20","grey50"), ylab="mean Dch Moran's I", ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
-title("(c)", adj = 0, line =1, cex.main=2 )
-```
-
-### c) Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
-# Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
-
-```{r fig.height=6, fig.width=6}
-
-par(mfrow=c(3,3), mar = c(3, 5, 4, 1))
-
-with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
-                        Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
-                        Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
-             ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="IBD", cex.main= 2, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
-                        Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
-                        Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
-             ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="1R", cex.main=2,  ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
-                        Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
-                        Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
-             ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="2R", cex.main=2, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-
-with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
-                        Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
-                        Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
-             ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
-                        Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
-                        Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
-             ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
-                        Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
-                        Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
-             ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-
-with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
-                        Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
-                        Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
-             ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
-                        Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
-                        Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
-             ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
-     boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
-                        Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
-                        Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
-             ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
-lines(c(0,10), c(1,1), lty=2)
-
-par(mfrow=c(1,1))
+# Results.sub.long.Dch <- read.csv('Results.mutated.Dch.long.csv', header= T, sep=',')
+# Results.sub.long.Dch$NumLoci <- factor(Results.sub.long.Dch$NumLoci, levels = c("500", "3300", "9900"))
+# noIM <- which(Results.sub.long.Dch$Demography != "IM")
+# 
+# par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
+# with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Dch, col=c("grey1","grey20","grey50"), ylab=" mean Dch", ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
+# title("(a)", adj = 0, line =1, cex.main=2 )
+# 
+# with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Adj.Rsqr.Pos, col=c("grey1","grey20","grey50"), ylab=expression("mean Dch adjusted R"^2), ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
+# title("(b)", adj = 0, line =1, cex.main=2 )
+# 
+# with(Results.sub.long.Dch[noIM,], {interaction.plot(NumInd, NumLoci, Morans.I, col=c("grey1","grey20","grey50"), ylab="mean Dch Moran's I", ylim=c(0.0,1.0), lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, xleg = "bottomright")})
+# title("(c)", adj = 0, line =1, cex.main=2 )
+# ```
+# 
+# ### c) Multipanel fig. one figure for each demography all on the same scale. boxplots (20 ind & 9900 loci)
+# # Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
+# 
+# ```{r fig.height=6, fig.width=6}
+# 
+# par(mfrow=c(3,3), mar = c(3, 5, 4, 1))
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
+#                         Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
+#                         Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
+#              ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="IBD", cex.main= 2, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
+#                         Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
+#                         Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
+#              ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="1R", cex.main=2,  ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90,
+#                         Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90,
+#                         Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90),
+#              ylab=expression("Dch adjusted R"^2), cex.lab=1.5, cex.axis=1.5, main="2R", cex.main=2, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
+#                         Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
+#                         Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
+#              ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
+#                         Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
+#                         Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
+#              ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90,
+#                         Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90,
+#                         Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90),
+#              ylab="Dch Moran's I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "IBD" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
+#                         Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
+#                         Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
+#              ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "1R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
+#                         Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
+#                         Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
+#              ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# with(Results.drop.MEM.table %>% filter(Demography == "2R" & NumInd == 20), 
+#      boxplot(data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
+#                         Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90,
+#                         Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90),
+#              ylab="Dch scaled Moran,s I", cex.lab=1.5, cex.axis=1.5, ylim=c(0.0,1)))
+# lines(c(0,10), c(1,1), lty=2)
+# 
+# par(mfrow=c(1,1))
 
 ```
