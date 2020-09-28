@@ -1696,10 +1696,9 @@ D11.a.s<- ggplot(D11.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("IBD") + xlab("Comparison") + ylab(expression(bold('Fst adjusted R'^2))) +
+    ggtitle("IBD") + xlab("") + ylab(expression(bold('Fst adjusted R'^2))) +
     theme(axis.text = element_text(size = 12),
           plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1711,10 +1710,9 @@ D22.a.s<- ggplot(D22.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("1R") + xlab("Comparison") + ylab(expression(bold('Fst adjusted R'^2))) +
+    ggtitle("1R") + xlab("") + ylab(expression(bold('Fst adjusted R'^2))) +
     theme(axis.text = element_text(size = 12),
           plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1726,10 +1724,9 @@ D33.a.s<- ggplot(D33.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("2R") + xlab("Comparison") + ylab(expression(bold('Fst adjusted R'^2))) +
+    ggtitle("2R") + xlab("") + ylab(expression(bold('Fst adjusted R'^2))) +
     theme(axis.text = element_text(size = 12),
           plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1743,9 +1740,8 @@ D44.a.s<- ggplot(D44.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Fst Mora's I") +
+   xlab("") + ylab("Fst Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1757,9 +1753,8 @@ D55.a.s<- ggplot(D55.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Fst Mora's I") +
+   xlab("") + ylab("Fst Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1771,9 +1766,8 @@ D66.a.s<- ggplot(D66.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Fst Mora's I") +
+   xlab("") + ylab("Fst Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1787,9 +1781,8 @@ D77.a.s<- ggplot(D77.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Fst scaled Mora's I") +
+   xlab("") + ylab("Fst scaled Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1801,9 +1794,8 @@ D88.a.s<- ggplot(D88.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Fst scaled Mora's I") +
+   xlab("") + ylab("Fst scaled Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1815,14 +1807,14 @@ D99.a.s<- ggplot(D99.s, aes(x = Comparison, y = Mean)) + ylim(0,1.02) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Fst scaled Mora's I") +
+    xlab("") + ylab("Fst scaled Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
 figure.3.P <- ggarrange(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3)
 figure.3.P
+
 
 
 # OLD code with boxplots
@@ -1977,10 +1969,9 @@ D1.a.s<- ggplot(D1.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("IBD") + xlab("Comparison") + ylab(expression(bold('Dch adjusted R'^2))) +
+    ggtitle("IBD") + xlab("") + ylab(expression(bold('Dch adjusted R'^2))) +
     theme(axis.text = element_text(size = 12),
           plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -1992,10 +1983,9 @@ D2.a.s<- ggplot(D2.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("1R") + xlab("Comparison") + ylab(expression(bold('Dch adjusted R'^2))) +
+    ggtitle("1R") + xlab("") + ylab(expression(bold('Dch adjusted R'^2))) +
     theme(axis.text = element_text(size = 12),
           plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -2007,10 +1997,9 @@ D3.a.s<- ggplot(D3.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("2R") + xlab("Comparison") + ylab(expression(bold('Dch adjusted R'^2))) +
+    ggtitle("2R") + xlab("") + ylab(expression(bold('Dch adjusted R'^2))) +
     theme(axis.text = element_text(size = 12),
           plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -2024,9 +2013,8 @@ D4.a.s<- ggplot(D4.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Dch Mora's I") +
+   xlab("") + ylab("Dch Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -2038,9 +2026,8 @@ D5.a.s<- ggplot(D5.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Dch Mora's I") +
+   xlab("") + ylab("Dch Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -2052,9 +2039,8 @@ D6.a.s<- ggplot(D6.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Dch Mora's I") +
+   xlab("") + ylab("Dch Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -2068,9 +2054,8 @@ D7.a.s<- ggplot(D7.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Dch scaled Mora's I") +
+   xlab("") + ylab("Dch scaled Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -2082,9 +2067,8 @@ D8.a.s<- ggplot(D8.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Dch scaled Mora's I") +
+   xlab("") + ylab("Dch scaled Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
@@ -2096,9 +2080,8 @@ D9.a.s<- ggplot(D9.s, aes(x = Comparison, y = Mean)) + ylim(0,1.02) +
    geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
    geom_point(shape = 1, size  = 2) +
    theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("Comparison") + ylab("Dch scaled Mora's I") +
+   xlab("") + ylab("Dch scaled Moran's I") +
     theme(axis.text = element_text(size = 12),
-          axis.title.x = element_text(size=12, face="bold"),
           axis.title.y = element_text(size=12, face="bold")
           )
 
