@@ -26,10 +26,7 @@ Response variables:
 ### a) Packages
 
 ```{r packages}
-#library(adegenet)
 library(hierfstat)
-#library(spdep)
-#library(adespatial)
 library(memgene)
 library(here)
 library(parallel)
@@ -121,17 +118,6 @@ for(r in 1:R)
   Sites.30[[r]] <- sort(sample(1:90, 30, replace=FALSE))
 }
 
-# Alternative: split into quadrants
-# ---------------------------------
-# R = 4
-# GroupX <- rep("A", 90)
-# GroupX[coord[,1] < median(coord[,1])] <- "B"
-# GroupY <- rep("C", 90)
-# GroupY[coord[,2] <= median(coord[,2])] <- "D"
-# Group <- factor(paste0(GroupX, GroupY))
-# Sites.30 <- split(c(1:90), Group)
-
-
 saveRDS(Sites.30, paste0(here::here(), "/output/Sites.30.rds"))
 ```
 
@@ -204,6 +190,17 @@ Results are stored in a list (one element per site j with 90 samples), with each
 - Data.frame with first column "pop" (factor of site IDs) and 9900 columns of neutral loci
     
 ### c) Run function 'getDgen' to calculate sample Fst and genetic distances
+
+New: randomize order of loci, same for all dataset
+
+```{r}
+
+Data.R.90 <- readRDS(paste0(here::here(), "/output/Data.R.90.rds"))
+for(i in 1:length(Data.R.90))
+{
+  Data.R.90[[i]] <- Data.R.90[[i]][,c(1,sample(2:ncol(Data.R.90[[i]])))]
+}
+```
 
 Define function:
 
@@ -406,13 +403,20 @@ getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL, drop=NULL)
     S[S < 0] <- 0
     #S = S / sum(S)
     
+<<<<<<< HEAD
+=======
     #tmp <- mgW.HW(dist(coord))
     #if(length(drop) > 0) tmp <- mgW.HW(dist(coord.drop))
     
+>>>>>>> 6c369f563fc14b8cb5d24560a3de7acf1a79efe3
     # Get Moran's I
     Values <- MEM$valuesMEM / abs(sum(MEM$valuesMEM))
     Range <- range(Values)
     Morans.I <- as.vector(S %*% Values)
+<<<<<<< HEAD
+    
+    Res[[k]] <- list(RsqAdj=RsqAdj, RsqAdjPos=RsqAdjPos, Rsq=Rsq, Morans.I=Morans.I, Range=Range)
+=======
     #I.sd <- ape::Moran.I(rnorm(n), tmp)$sd
     C <- diag(t(sqrt(S)) %*% diag(Values^2) %*% sqrt(S))
     Rho <- Morans.I / sqrt(C)
@@ -458,6 +462,7 @@ getMEMgene <- function(j, Dgen = Dgen.R.90, subset=NULL, drop=NULL)
     #                    C.drop=C.drop, Rho.drop=Rho.drop, Range.drop=Range.drop, 
     #                    S.tot=S.tot, S.min=S.min, S.tot.drop=S.tot.drop)
     # }
+>>>>>>> 6c369f563fc14b8cb5d24560a3de7acf1a79efe3
   }
   names(Res) <- names(Dgen[[1]]$Dgen)
   
@@ -578,10 +583,13 @@ getRes <- function(Results=Results, k = 1)
   RsqAdjPos = sapply(Results, function(ls) ls[[k]]$RsqAdjPos)
   #Rsq = sapply(Results, function(ls) ls[[k]]$Rsq)
   Morans.I = sapply(Results, function(ls) ls[[k]]$Morans.I)
-  C = sapply(Results, function(ls) ls[[k]]$C)
-  Rho = sapply(Results, function(ls) ls[[k]]$Rho)
   I.max = sapply(Results, function(ls) max(ls[[k]]$Range))
   I.min = sapply(Results, function(ls) min(ls[[k]]$Range))
+<<<<<<< HEAD
+  I.scaled = Morans.I / I.max
+  res <- data.frame(RsqAdj=RsqAdj, RsqAdjPos=RsqAdjPos, Rsq=Rsq, Morans.I=Morans.I, 
+                    I.max=I.max, I.min=I.min, I.scaled=I.scaled)
+=======
   #I.sd = sapply(Results, function(ls) ls[[k]]$I.sd)
   I.scaled = Morans.I / I.max
   I.scaled2 = 2 * (Morans.I - I.min)/(I.max - I.min) - 1
@@ -590,6 +598,7 @@ getRes <- function(Results=Results, k = 1)
   #                  I.max=I.max, I.min=I.min, I.scaled=I.scaled, I.scaled2=I.scaled2, I.z=I.z)
   res <- data.frame(S.tot=S.tot, S.min=S.min, RsqAdjPos=RsqAdjPos, Morans.I=Morans.I, C=C, Rho=Rho,
                     I.max=I.max, I.min=I.min, I.scaled=I.scaled, I.scaled2=I.scaled2)
+>>>>>>> 6c369f563fc14b8cb5d24560a3de7acf1a79efe3
 }
 ```
 
@@ -643,7 +652,6 @@ Response variables:
 - Rsq: unadjusted (not reported in memgene)
 - Morans.I: assuming population is sampled. Correct with (n-1)/n (where n = 90) for estimating population Moran's I
 - Morans.I.scaled: this is experimental. Divide Morans.I by the maximum value (max(Range)).
-- Morans.I.scaled2: this is experimental. Rescaled to range between [-1, 1]: `I.scaled2 = 2 * (I - min)/(max - min) - 1`
 
 Notes:
 
@@ -755,24 +763,13 @@ for(k in 1:length(res.r[[1]]))
     RsqAdjPos.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$RsqAdjPos), 1, sd)
     Morans.I.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, mean)
     Morans.I.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$Morans.I), 1, sd)
-    C.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, mean)
-    C.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, sd)
-    Rho.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, mean)
-    Rho.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, sd)
     I.scaled.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled), 1, mean)
     I.scaled.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled), 1, sd)
-    I.scaled2.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled2), 1, mean)
-    I.scaled2.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$I.scaled2), 1, sd)
-    I.z.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$I.z), 1, mean)
-    I.z.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$I.z), 1, sd)
   
     tmp[[k]] <- data.frame(RsqAdj.30.m=RsqAdj.30.m, RsqAdj.30.s=RsqAdj.30.s, 
                            RsqAdjPos.30.m=RsqAdjPos.30.m, RsqAdjPos.30.s=RsqAdjPos.30.s, 
                            Morans.I.30.m=Morans.I.30.m, Morans.I.30.s=Morans.I.30.s,
-                           C.30.m=C.30.m, C.30.s=C.30.s, Rho.30.m=Rho.30.m, Rho.30.s=Rho.30.s,
-                           I.scaled.30.m=I.scaled.30.m, I.scaled.30.s=I.scaled.30.s,
-                           I.scaled2.30.m=I.scaled2.30.m, I.scaled2.30.s=I.scaled2.30.s,
-                           I.z.30.m=I.z.30.m, I.z.30.s=I.z.30.s)
+                           I.scaled.30.m=I.scaled.30.m, I.scaled.30.s=I.scaled.30.s)
 }
 
 tmp.3 <- list()
@@ -784,25 +781,13 @@ for(k in 1:length(res.r[[1]]))
     RsqAdjPos.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$RsqAdjPos), 1, sd)
     Morans.I.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$Morans.I), 1, mean)
     Morans.I.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$Morans.I), 1, sd)
-    C.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, mean)
-    C.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, sd)
-    Rho.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, mean)
-    Rho.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, sd)
     I.scaled.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$I.scaled), 1, mean)
     I.scaled.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$I.scaled), 1, sd)
-    I.scaled2.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$I.scaled2), 1, mean)
-    I.scaled2.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$I.scaled2), 1, sd)
-    I.z.30.m <- apply(sapply(res.r.3, function(sub) sub[[k]]$I.z), 1, mean)
-    I.z.30.s <- apply(sapply(res.r.3, function(sub) sub[[k]]$I.z), 1, sd)
     
     tmp.3[[k]] <- data.frame(RsqAdj.30.3.m=RsqAdj.30.m, RsqAdj.30.3.s=RsqAdj.30.s, 
                            RsqAdjPos.30.3.m=RsqAdjPos.30.m, RsqAdjPos.30.3.s=RsqAdjPos.30.s, 
                            Morans.I.30.3.m=Morans.I.30.m, Morans.I.30.3.s=Morans.I.30.s,
-                           C.30.3.m=C.30.m, C.30.3.s=C.30.s, 
-                           Rho.30.3.m=Rho.30.m, Rho.30.3.s=Rho.30.s,
-                           I.scaled.30.3.m=I.scaled.30.m, I.scaled.30.3.s=I.scaled.30.s,
-                           I.scaled2.30.3.m=I.scaled2.30.m, I.scaled2.30.3.s=I.scaled2.30.s,
-                           I.z.30.3.m=I.z.30.m, I.z.30.3.s=I.z.30.s)
+                           I.scaled.30.3.m=I.scaled.30.m, I.scaled.30.3.s=I.scaled.30.s)
 }
 
 tmp.500 <- list()
@@ -814,25 +799,13 @@ for(k in 1:length(res.r[[1]]))
     RsqAdjPos.30.s <- apply(sapply(res.r.500, function(sub) sub[[k]]$RsqAdjPos), 1, sd)
     Morans.I.30.m <- apply(sapply(res.r.500, function(sub) sub[[k]]$Morans.I), 1, mean)
     Morans.I.30.s <- apply(sapply(res.r.500, function(sub) sub[[k]]$Morans.I), 1, sd)
-    C.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, mean)
-    C.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$C), 1, sd)
-    Rho.30.m <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, mean)
-    Rho.30.s <- apply(sapply(res.r, function(sub) sub[[k]]$Rho), 1, sd)
     I.scaled.30.m <- apply(sapply(res.r.500, function(sub) sub[[k]]$I.scaled), 1, mean)
     I.scaled.30.s <- apply(sapply(res.r.500, function(sub) sub[[k]]$I.scaled), 1, sd)
-    I.scaled2.30.m <- apply(sapply(res.r.500, function(sub) sub[[k]]$I.scaled2), 1, mean)
-    I.scaled2.30.s <- apply(sapply(res.r.500, function(sub) sub[[k]]$I.scaled2), 1, sd)
-    I.z.30.m <- apply(sapply(res.r.500, function(sub) sub[[k]]$I.z), 1, mean)
-    I.z.30.s <- apply(sapply(res.r.500, function(sub) sub[[k]]$I.z), 1, sd)
     
     tmp.500[[k]] <- data.frame(RsqAdj.30.500.m=RsqAdj.30.m, RsqAdj.30.500.s=RsqAdj.30.s, 
                            RsqAdjPos.30.500.m=RsqAdjPos.30.m, RsqAdjPos.30.500.s=RsqAdjPos.30.s, 
                            Morans.I.30.500.m=Morans.I.30.m, Morans.I.30.500.s=Morans.I.30.s,
-                           C.30.500.m=C.30.m, C.30.500.s=C.30.s, 
-                           Rho.30.500.m=Rho.30.m, Rho.30.500.s=Rho.30.s,
-                           I.scaled.30.500.m=I.scaled.30.m, I.scaled.30.500.s=I.scaled.30.s,
-                           I.scaled2.30.500.m=I.scaled2.30.m, I.scaled2.30.500.s=I.scaled2.30.s,
-                           I.z.30.500.m=I.z.30.m, I.z.30.500.s=I.z.30.s)
+                           I.scaled.30.500.m=I.scaled.30.m, I.scaled.30.500.s=I.scaled.30.s)
 }
 
 res.r.combined <- Reduce(cbind, tmp)
@@ -872,34 +845,16 @@ with(Results.subsets.table, boxplot(Fst.RsqAdjPos.90 ~ Demography,
      main="Fst.RsqAdjPos", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Fst.Morans.I.90 ~ Demography,
      main="Fst.Morans.I", ylim=c(0,1)))
-#with(Results.subsets.table, boxplot(Fst.I.scaled.90 ~ Demography,
-#     main="Fst.I.scaled", ylim=c(-0.5,1)))
-#lines(c(0,10), c(0,0), lty=2)
-#with(Results.subsets.table, boxplot(Fst.I.scaled2.90 ~ Demography,
-#     main="Fst.I.scaled2", ylim=c(-0.5,1)))
-#lines(c(0,10), c(0,0), lty=2)
-with(Results.subsets.table, boxplot(Fst.C.90 ~ Demography,
-     main="Fst.C", ylim=c(0,1)))
-with(Results.subsets.table, boxplot(Fst.Rho.90 ~ Demography,
-     main="Fst.Rho", ylim=c(0,1)))
 
 
 with(Results.subsets.table, boxplot(Dch.RsqAdjPos.90 ~ Demography,
      main="Dch.RsqAdjPos", ylim=c(0,1)))
 with(Results.subsets.table, boxplot(Dch.Morans.I.90 ~ Demography,
      main="Dch.Morans.I", ylim=c(0,1)))
-#with(Results.subsets.table, boxplot(Dch.I.scaled.90 ~ Demography,
-#     main="Dch.I.scaled", ylim=c(-0.5,1)))
-#lines(c(0,10), c(0,0), lty=2)
-#with(Results.subsets.table, boxplot(Dch.I.scaled2.90 ~ Demography,
-#     main="Dch.I.scaled2", ylim=c(-0.5,1)))
-#lines(c(0,10), c(0,0), lty=2)
-with(Results.subsets.table, boxplot(Dch.C.90 ~ Demography,
-     main="Dch.C", ylim=c(0,1)))
-with(Results.subsets.table, boxplot(Dch.Rho.90 ~ Demography,
-     main="Dch.Rho", ylim=c(0,1)))
+
 par(mfrow=c(1,1))
 ```
+
 **Interpretation:**
 
 - As expected, island model (IM) does not show spatial structure.
@@ -925,10 +880,6 @@ with(Results.subsets.table[a,], boxplot(Fst.Morans.I.90 ~ NumInd,
      main="Fst.Morans.I", ylim=c(0,1)))
 #with(Results.subsets.table[a,], boxplot(Fst.I.scaled.90 ~ NumInd,
 #     main="Fst.I.scaled", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(Fst.C.90 ~ NumInd,
-     main="Fst.C", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(Fst.Rho.90 ~ NumInd,
-     main="Fst.Rho", ylim=c(0,1)))
 
 with(Results.subsets.table[a,], boxplot(Dch.RsqAdjPos.90 ~ NumInd,
      main="Dch.RsqAdjPos", ylim=c(0,1)))
@@ -936,10 +887,6 @@ with(Results.subsets.table[a,], boxplot(Dch.Morans.I.90 ~ NumInd,
      main="Dch.Morans.I", ylim=c(0,1)))
 #with(Results.subsets.table[a,], boxplot(Dch.I.scaled.90 ~ NumInd,
 #     main="Dch.I.scaled", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(Dch.C.90 ~ NumInd,
-     main="Dch.C", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(Dch.Rho.90 ~ NumInd,
-     main="Dch.Rho", ylim=c(0,1)))
 
 par(mfrow=c(1,1))
 ```
@@ -965,12 +912,6 @@ with(Results.subsets.table[a,], boxplot(list("500"=Fst.Morans.I.90.500,
 #with(Results.subsets.table[a,], boxplot(list("500"=Fst.I.scaled.90.500,
 #                                         "3300"=Fst.I.scaled.90.3, "9900"=Fst.I.scaled.90),
 #     main="Fst.I.scaled, n=90", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(list("500"=Fst.C.90.500,
-                                         "3300"=Fst.C.90.3, "9900"=Fst.C.90),
-     main="Fst.C, n=90", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(list("500"=Fst.Rho.90.500,
-                                         "3300"=Fst.Rho.90.3, "9900"=Fst.Rho.90),
-     main="Fst.Rho, n=90", ylim=c(0,1)))
 
 
 with(Results.subsets.table[a,], boxplot(list("500"=Fst.RsqAdjPos.30.500.m, 
@@ -982,12 +923,6 @@ with(Results.subsets.table[a,], boxplot(list("500"=Fst.Morans.I.30.500.m,
 #with(Results.subsets.table[a,], boxplot(list("500"=Fst.I.scaled.30.500.m, 
 #                                         "3300"=Fst.I.scaled.30.3.m, "9900"=Fst.I.scaled.30.m),
 #     main="Fst.I.scaled, n=30", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(list("500"=Fst.C.30.500.m, 
-  "3300"=Fst.C.30.3.m, "9900"=Fst.C.30.m),
-     main="Fst.C, n=30", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(list("500"=Fst.Rho.30.500.m, 
-  "3300"=Fst.Rho.30.3.m, "9900"=Fst.Rho.30.m),
-     main="Fst.Rho, n=30", ylim=c(0,1)))
 par(mfrow=c(1,1))
 ```
 **Interpretation:**
@@ -1076,16 +1011,9 @@ with(Results.subsets.table[a,], boxplot(list("30"=Fst.Morans.I.30.m, "90"=Fst.Mo
      main="Fst.Morans.I", ylim=c(0,1)))
 with(Results.subsets.table[a,], boxplot(list("30"=Fst.I.scaled.30.m, "90"=Fst.I.scaled.90),
      main="Fst.I.scaled", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(list("30"=Fst.Rho.30.m, "90"=Fst.Rho.90),
-     main="Fst.Rho", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(list("30"=Fst.C.30.m, "90"=Fst.C.90),
-     main="Fst.C", ylim=c(0,1)))
-#with(Results.subsets.table[a,], boxplot(list("30"=Fst.I.scaled2.30.m, "90"=Fst.I.scaled2.90),
-#     main="Fst.I.scaled2", ylim=c(-0.5,1)))
-with(Results.subsets.table[a,], boxplot(list("30"=Fst.I.z.30.m, "90"=Fst.I.z.90),
-     main="Fst.I.z"))
 par(mfrow=c(1,1))
 ```
+
 **Interpretation:**
 
 - All measures are sensitive to the number of populations sampled!
@@ -1107,9 +1035,6 @@ with(Results.subsets.table[a,], boxplot(list("30"=Fst.Morans.I.30.m * 29/30,
 with(Results.subsets.table[a,], boxplot(list("30"=Fst.I.scaled.30.m * 29/30,
                                          "90"=Fst.I.scaled.90*89/90),
      main="Fst.I.scaled", ylim=c(0,1)))
-with(Results.subsets.table[a,], boxplot(list("30"=Fst.I.scaled2.30.m * 29/30,
-                                         "90"=Fst.I.scaled2.90*89/90),
-     main="Fst.I.scaled2", ylim=c(-0.5,1)))
 lines(c(0,10), c(0,0), lty=3)
 par(mfrow=c(1,1))
 ```
@@ -1132,20 +1057,12 @@ with(Results.subsets.table[a,], t.test(Fst.RsqAdjPos.30.m, Fst.RsqAdjPos.90, pai
 
 with(Results.subsets.table[a,], t.test(Fst.Morans.I.30.m, Fst.Morans.I.90, paired=TRUE))
 
-with(Results.subsets.table[a,], t.test(Fst.C.30.m, Fst.C.90, paired=TRUE))
-
-with(Results.subsets.table[a,], t.test(Fst.Rho.30.m, Fst.Rho.90, paired=TRUE))
-
 with(Results.subsets.table[a,], t.test(Fst.I.scaled.30.m, Fst.I.scaled.90, paired=TRUE))
-
-with(Results.subsets.table[a,], t.test(Fst.I.scaled2.30.m, Fst.I.scaled2.90, paired=TRUE))
 
 with(Results.subsets.table[a,], t.test(Fst.Morans.I.30.m * 29/30, 
                                          Fst.Morans.I.90 *89/90, paired=TRUE))
 with(Results.subsets.table[a,], t.test(Fst.I.scaled.30.m * 29/30,
                                          Fst.I.scaled.90*89/90, paired=TRUE))
-with(Results.subsets.table[a,], t.test(Fst.I.scaled2.30.m * 29/30,
-                                         Fst.I.scaled2.90*89/90, paired=TRUE))
 ```
 
 ### d) Effect sizes (without IM)
@@ -1165,26 +1082,14 @@ with(Results.subsets.table[a,], mean(Fst.RsqAdjPos.30.m - Fst.RsqAdjPos.90)/
 with(Results.subsets.table[a,], mean(Fst.Morans.I.30.m - Fst.Morans.I.90)/
        sd(Fst.Morans.I.30.m - Fst.Morans.I.90)) 
 
-with(Results.subsets.table[a,], mean(Fst.C.30.m - Fst.C.90)/ 
-       sd(Fst.C.30.m - Fst.C.90))
-
-with(Results.subsets.table[a,], mean(Fst.Rho.30.m - Fst.Rho.90)/
-       sd(Fst.Rho.30.m - Fst.Rho.90)) 
-
 with(Results.subsets.table[a,], mean(Fst.I.scaled.30.m - Fst.I.scaled.90)/
        sd(Fst.I.scaled.30.m - Fst.I.scaled.90))
-
-with(Results.subsets.table[a,], mean(Fst.I.scaled2.30.m - Fst.I.scaled2.90)/
-       sd(Fst.I.scaled2.30.m - Fst.I.scaled2.90))
 
 with(Results.subsets.table[a,], mean(Fst.Morans.I.30.m * 29/30 - Fst.Morans.I.90 *89/90) /
        sd(Fst.Morans.I.30.m * 29/30 - Fst.Morans.I.90 *89/90))
 
 with(Results.subsets.table[a,], mean(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90) /
        sd(Fst.I.scaled.30.m * 29/30 - Fst.I.scaled.90*89/90))
-
-with(Results.subsets.table[a,], mean(Fst.I.scaled2.30.m * 29/30 - Fst.I.scaled2.90*89/90) /
-       sd(Fst.I.scaled2.30.m * 29/30 - Fst.I.scaled2.90*89/90))
 ```
 
 HW Notes:
@@ -1192,7 +1097,6 @@ HW Notes:
 - Power of forward selection? No, because Moran's I also affected
 - Nearest neighbor distance? No, because problem persists for quadrant subsets
 - Population vs. sample? No, because difference gets larger when corrected
-- Moran's I bad estimator of rho? No, because rho not  better. C is somewhat better.
 - z-score for null distribution of Moran's I? No, because z scores even more different
 
 ## 7. Interaction Plots
@@ -1239,16 +1143,9 @@ par(mfrow=c(4,3))
 with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
 with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
 with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
-with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled2.90, type = "b", pch = c(19,17), fixed = TRUE)})
-with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled2.90.3, type = "b", pch = c(19,17), fixed = TRUE)})
-with(Results.subsets.table, {interaction.plot(Demography, NumInd, Dch.I.scaled2.90.500, type = "b", pch = c(19,17), fixed = TRUE)})
 with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled.90, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
 with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled.90.3, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
 with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled.90.500, ylim = c(0,1), type = "b", pch = c(19,17), fixed = TRUE)})
-with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled2.90, type = "b", pch = c(19,17), fixed = TRUE)})
-with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled2.90.3, type = "b", pch = c(19,17), fixed = TRUE)})
-with(Results.subsets.table, {interaction.plot(Demography, NumInd, Fst.I.scaled2.90.500, type = "b", pch = c(19,17), fixed = TRUE)})
-
 ```
 # we dont need this one! I
 
