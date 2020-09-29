@@ -1,13 +1,16 @@
 ---
 title: "MEMgene paper analysis"
-output: 
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
     theme: flatly
     toc: yes
     toc_depth: 3
     toc_float:
-      collapsed: false
-      smooth_scroll: false
+      collapsed: no
+      smooth_scroll: no
 ---
 
 Analysis of simulated datasets from Lotterhos & Whitlock with the same random sampling of 90 sites as in Wagner et al. (2017).
@@ -26,7 +29,7 @@ library(dplyr)
 library(spdep)
 ```
 
-### b) Import patial coordinates
+### b) Import spatial coordinates
 
 ```{r coords}
 Coords <- list()
@@ -496,7 +499,6 @@ names(res.500.combined) <- paste(names(res.combined), "500", sep=".")
 Results.table <- data.frame(Design[Sites.R.90,], Ftab, res.combined, 
                             res.3.combined, res.500.combined)
 saveRDS(Results.table, paste0(here::here(), "/output/Results.table.rds"))
-Results.table
 
 rm(list=c("Results", "Results.3", "Results.500", "D", "D.3", "D.500"))
 ```
@@ -590,7 +592,6 @@ names(res.r.combined) <- paste(rep(names(Results.subsets[[1]][[1]]), each=ncol(t
 
 Results.subsets.table <- data.frame(Results.table, res.r.combined)
 saveRDS(Results.subsets.table, paste0(here::here(), "/output/Results.subsets.table.rds"))
-Results.subsets.table
 ```
 
 
@@ -730,7 +731,6 @@ names(res.r.combined) <- paste(rep(names(Results.drop[[1]][[1]]), each=ncol(tmp[
 
 Results.drop.table <- data.frame(Results.subsets.table, res.r.combined)
 saveRDS(Results.drop.table, paste0(here::here(), "/output/Results.drop.table.rds"))
-Results.drop.table
 ```
 
 Repeat with refitted MEM
@@ -761,7 +761,6 @@ names(res.r.combined) <- paste(rep(names(Results.drop[[1]][[1]]), each=ncol(tmp[
 
 Results.drop.MEM.table <- data.frame(Results.drop.table, res.r.combined)
 saveRDS(Results.drop.MEM.table, paste0(here::here(), "/output/Results.drop.MEM.table.rds"))
-Results.drop.MEM.table
 ```
 
 
@@ -776,7 +775,6 @@ library("ggplot2")
 library("gridExtra")
 library("reshape2")
 library("tidyr")
-#library("sciplot")
 
 source(paste0(here::here(), "/output/InteractionPlotLegend.R"))
 ```
@@ -832,7 +830,7 @@ Pan.c.p<- ggplot(Sum3.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
           axis.title.y = element_text(size=12, face="bold")
           )
 figure.1.P <- ggarrange(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1)
-figure.1.P
+#figure.1.P
 
 g <- arrangeGrob(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1) #generates g
  ggsave(file=paste0(here::here(), "/output/Figure1.pdf"), g)
@@ -1066,7 +1064,7 @@ D99.a.s<- ggplot(D99.s, aes(x = Comparison, y = Mean)) + ylim(0,1.02) +
           )
 
 figure.3.P <- ggarrange(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3)
-figure.3.P
+#figure.3.P
 
 g <- arrangeGrob(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3) 
 ggsave(file=paste0(here::here(), "/output/Figure3.pdf"), g)
@@ -1123,7 +1121,7 @@ Pan.c.p<- ggplot(Sum3.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
           axis.title.y = element_text(size=12, face="bold")
           )
 figure.1.P <- ggarrange(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1)
-figure.1.P
+#figure.1.P
 
 g <- arrangeGrob(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1) #generates g
  ggsave(file=paste0(here::here(), "/output/FigureS1.pdf"), g)
@@ -1356,7 +1354,7 @@ D99.a.s<- ggplot(D99.s, aes(x = Comparison, y = Mean)) + ylim(0,1.02) +
           )
 
 figure.3.P <- ggarrange(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3)
-figure.3.P
+#figure.3.P
 
 g <- arrangeGrob(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3) 
 ggsave(file=paste0(here::here(), "/output/FigureS3.pdf"), g)
