@@ -834,6 +834,7 @@ figure.1.P <- ggarrange(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1)
 
 g <- arrangeGrob(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1) #generates g
  ggsave(file=paste0(here::here(), "/output/Figure1.pdf"), g)
+ ggsave(file=paste0(here::here(), "/output/Figure1.jpg"), g)
 
 ```
 
@@ -874,10 +875,10 @@ Results.sub.long <- Results.sub.long %>% mutate(NumLoci = rep(c(9900, 3300, 500)
   mutate(NumLoci = factor(NumLoci, levels = c("500", "3300", "9900"))) %>% 
   filter(Demography != "IM")
 
-pdf(file = paste0(here::here(), "/output/Figure2.pdf"), width=8, height=3.5)
+#pdf(file = paste0(here::here(), "/output/Figure2.pdf"), width=8, height=3.5)
+jpeg(file = paste0(here::here(), "/output/Figure2.jpg"), width=8, height=3.5, units="in", res=300)
 
-par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
-
+par(mfcol=c(1,3), mai = c(0.8, 0.8, 0.5, 0.1), omi=c(0,0,0,0))
   with(Results.sub.long, {interaction.plot(NumInd, NumLoci, Fst, 
                                              col=c("grey1","grey20","grey50"), 
                                              ylab=" mean Fst", ylim=c(0.0,0.015), lwd= 3, 
@@ -1068,6 +1069,7 @@ figure.3.P <- ggarrange(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D7
 
 g <- arrangeGrob(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3) 
 ggsave(file=paste0(here::here(), "/output/Figure3.pdf"), g)
+ggsave(file=paste0(here::here(), "/output/Figure3.jpg"), g)
 
 ```
 
