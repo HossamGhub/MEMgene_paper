@@ -1,5 +1,5 @@
 ---
-title: "MEMgene paper analysis"
+title: "MEMgene effect size analysis"
 output:
   pdf_document:
     toc: yes
@@ -12,12 +12,21 @@ output:
       collapsed: no
       smooth_scroll: no
 ---
+## 0. Introduction
 
-Analysis of simulated datasets from Lotterhos & Whitlock with the same random sampling of 90 sites as in Wagner et al. (2017).
+This file documents the analysis of simulated datasets from Lotterhos & Whitlock (2015) with the same random sampling of 90 sites as in Wagner et al. (2017).
+
+For now, the analysis is based on the subsets of 20 or 6 individuals per sampling location that were exported by Lotterhos & Whitlock (2015), i.e., the samples with n=6 individuals are not sampled.
 
 ## 1. Preparations
 
-### a) Packages
+Setup chunk: avoid rerunning code when knitting notebook 
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+Load packages (more are loaded later for producing figures)
 
 ```{r packages}
 library(hierfstat)
@@ -28,7 +37,7 @@ library(dplyr)
 library(spdep)
 ```
 
-### b) Import spatial coordinates
+### a) Import spatial coordinates
 
 ```{r coords}
 Coords <- list()
@@ -51,7 +60,7 @@ for(i in 1:length(Coords))
 }
 ```
 
-### c) Parameter space
+### b) Parameter space
 
 Genetic data: find all file names in the folder "SimFilesLFMM" that contain 'lfmm':
 
@@ -90,7 +99,7 @@ Design matrix (parameter space): each row is one combination of parameter settin
    head(Design)
 ```
 
-### d) Create R replicate random samples of n = 30 sites
+### c) Create R replicate random samples of n = 30 sites
 
 ```{r subsets}
 R = 10
@@ -104,7 +113,7 @@ for(r in 1:R)
 saveRDS(Sites.30, paste0(here::here(), "/output/Sites.30.rds"))
 ```
 
-### e) Create R replicate random samples of n = 60 sites
+### d) Create R replicate random samples of n = 60 sites
 
 ```{r}
 R = 10
@@ -528,7 +537,7 @@ Notes:
 
 - Env: for each combination, there are three replicate datasets (Env: 453, 988, 950). Env could be used as a blocking variable.
 
-### c) NEW Dec 2020: Standardized effect sizes
+### c) Standardized effect sizes
 
 Extract simulated responses, calculate mean and sdev
 
@@ -557,6 +566,20 @@ row.names(Sim.distributions) <- names(Results.sim[[1]])
 
 saveRDS(Sim.distributions, paste0(here::here(), "/output/Sim.distributions.rds"))
 ```
+
+Check visually for normal distribution:
+
+Values are pooled among 
+
+```{r}
+par(mfrow=c(2,2))
+qqnorm(data.matrix(RsqAdjPos.sim.Fst[,c(1,3,5)])[], main="A: Adjusted R-squared")
+qqnorm(data.matrix(RsqPos.sim.Fst[,c(1,3,5)])[], main="B: R-squared, unadjusted")
+qqnorm(data.matrix(Morans.I.sim.Fst[,c(1,3,5)])[], main="C: Moran's I")
+qqnorm(data.matrix(I.scaled.sim.Fst[,c(1,3,5)])[], main="C: Moran's I, rescaled")
+par(mfrow=c(1,1))
+```
+
 
 For each response, subtract mean of simulated values and divide by their sdev (Fst only)
 
@@ -1196,59 +1219,44 @@ With n=90, #IND= 20 & the 9900 loci: Difference demographies in response variabe
 ```{r fig.height=2.5, fig.width=6}
 
 #Results.table <- readRDS(paste0(here::here(), "/output/Results.table.rds"))
-#Results.subsets.table <- readRDS(paste0(here::here(), "/output/Results.subsets.table.rds"))
-#Results.table <- Results.subsets.table
+Results.subsets.table <- readRDS(paste0(here::here(), "/output/Results.subsets.table.rds"))
+Results.table <- Results.subsets.table
 
 s = 1
 b <- which(Results.table[[s]]$NumInd == 20)
 Results.table[[s]]$Demography <- factor(Results.table[[s]]$Demography, 
                                         levels = c("IM", "IBD", "1R", "2R"))
 
-Sum1.p <- groupwiseMean(Fst.90 ~ Demography, data = Results.table[[s]][b,], 
-                        conf   = 0.95, digits = 3)
-Pan.a.p<- ggplot(Sum1.p, aes(x = Demography, y = Mean)) + ylim(0.0,0.02) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("(a)") + xlab("Demography") + ylab("Fst") +
-    theme(axis.text = element_text(size = 12),
-          plot.title = element_text(size=16, face="bold"),
-          axis.title.x = element_text(size=12, face="bold"),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-#Pan.a.p
+Metrics <- c("Fst.90", "Fst.RsqAdjPos.90", "Fst.Morans.I.90")
+Labels <- c("Fst", expression('Adjusted R'^2), "Moran's I")
+ymin = c(0.0, -0.02, -0.02)
+ymax = c(0.02, 0.8, 0.8)
+Title <- c("(a)", "(b)", "(c)")
 
-Sum2.p <- groupwiseMean(Fst.RsqAdjPos.90 ~ Demography, data = Results.table[[s]][b,], 
-                        conf   = 0.95, digits = 3)
-Pan.b.p<- ggplot(Sum2.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("(b)") + xlab("Demography") + ylab(expression(bold('Adjusted R'^2))) +
-    theme(axis.text = element_text(size = 12),
-          plot.title = element_text(size=16, face="bold"),
-          axis.title.x = element_text(size=12, face="bold"),
-          axis.title.y = element_text(size=12, face="bold")
-          )
+Plots <- list()
 
-Sum3.p <- groupwiseMean(Fst.Morans.I.90 ~ Demography, data = Results.table[[s]][b,], 
-                        conf   = 0.95, digits = 3)
-Pan.c.p<- ggplot(Sum3.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("(c)") + xlab("Demography") + ylab("Moran's I") +
-    theme(axis.text = element_text(size = 12),
-          plot.title = element_text(size=16, face="bold"),
-          axis.title.x = element_text(size=12, face="bold"),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-figure.1.P <- ggarrange(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1)
-#figure.1.P
+for(m in 1:3)
+{
+  Sum1.p <- groupwiseMean(var = Metrics[m], group = "Demography", data = Results.table[[s]][b,], 
+                          conf   = 0.95, digits = 3)
+  Plots[[m]] <- ggplot(Sum1.p, aes(x = Demography, y = Mean)) + ylim(ymin[m], ymax[m]) +
+     geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+     geom_point(shape = 1, size  = 2) +
+     theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+      ggtitle(Title[m]) + xlab("Demography") + ylab(Labels[m]) +
+      theme(axis.text = element_text(size = 12),
+            plot.title = element_text(size=16, face="bold"),
+            axis.title.x = element_text(size=12, face="bold"),
+            axis.title.y = element_text(size=12, face="bold")
+            )
+}
 
-g <- arrangeGrob(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1) #generates g
- ggsave(file=paste0(here::here(), "/output/Figure1.pdf"), g)
- ggsave(file=paste0(here::here(), "/output/Figure1.jpg"), g)
+figure.1.P <- ggarrange(Plots[[1]], Plots[[2]], Plots[[3]], ncol = 3, nrow = 1)
+figure.1.P
+
+g <- arrangeGrob(Plots[[1]], Plots[[2]], Plots[[3]], ncol = 3, nrow = 1) #generates g
+ ggsave(file=paste0(here::here(), "/output/Figure1.pdf"), g, width=8, height=3)
+ ggsave(file=paste0(here::here(), "/output/Figure1.jpg"), g, width=8, height=3)
 
 ```
 
@@ -1259,6 +1267,8 @@ With n=90 and removing IM: Interaction between #Ind (20, 6) and # Loci (9900, 33
 
 
 ```{r fig.height=2.5, fig.width=6}
+loci <- c(9900, 3300, 500, 100, 50)
+
 Results.table <- Results.subsets.table 
 
 a <- which(Results.table[[1]]$Demography != "IM")
@@ -1277,34 +1287,26 @@ Results.sub.long <- Results.sub.long %>%
             mutate(NumInd = factor(NumInd, levels = c("20", "6")))
 names(Results.sub.long)[5:8] <- c("Fst", "Adj.Rsqr.Pos", "Morans.I", "I.scaled")
 
+pdf(file = paste0(here::here(), "/output/Figure2.pdf"), width=8, height=3)
+par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
 
-#pdf(file = paste0(here::here(), "/output/Figure2.pdf"), width=8, height=3.5)
-jpeg(file = paste0(here::here(), "/output/Figure2.jpg"), width=8, height=3.5, units="in", res=300)
+Metrics <- c("Fst", "Adj.Rsqr.Pos", "Morans.I")
+Labels <- c("Mean Fst", expression("Mean adjusted R"^2), "Mean Moran's I")
+ymax <- c(0.015, 0.6, 0.6)
+Leg <- c(TRUE, FALSE, FALSE)
+Title <- c("(a)", "(b)", "(c)")
 
-par(mfcol=c(1,3), mai = c(0.8, 0.8, 0.5, 0.1), omi=c(0,0,0,0))
-  with(Results.sub.long, {interaction.plot(NumInd, NumLoci, Fst, 
+for(m in 1:3)
+{
+  with(Results.sub.long, {interaction.plot(NumInd, NumLoci, get(Metrics[m]), 
                             col=c("grey70","grey50","grey30", "grey20", "grey1"), 
-                            ylab=" Mean Fst", ylim=c(0.0,0.015), lwd= 1.5, 
+                            ylab= Labels[m], ylim=c(0.0, ymax[m]), lwd= 1.5, 
                             xlab="Number of individuals", cex.lab=1.5, cex.axis=1.5, 
-                            cex.sub=1.5, xleg = "bottomright")})
-  title("(a)", adj = 0, line =1, cex.main=2 )
-    
- with(Results.sub.long, {interaction.plot(NumInd, NumLoci, Adj.Rsqr.Pos, 
-                           col=c("grey70","grey50","grey30", "grey20", "grey1"), 
-                           ylab=expression("Mean adjusted R"^2), ylim=c(0.0,0.6), 
-                           xlab="Number of individuals", lwd= 1.5, cex.lab=1.5, 
-                           cex.axis=1.5, cex.sub=1.5, legend=FALSE)})
- title("(b)", adj = 0, line =1, cex.main=2 )
-  
- with(Results.sub.long, {interaction.plot(NumInd, NumLoci, Morans.I, 
-                           col=c("grey70","grey50","grey30", "grey20", "grey1"), 
-                           ylab="Mean Moran's I", ylim=c(0.0,0.6), 
-                           xlab="Number of individuals", lwd= 1.5, cex.lab=1.5, 
-                           cex.axis=1.5, cex.sub=1.5, legend=FALSE)})
- title("(c)", adj = 0, line =1, cex.main=2 )
+                            cex.sub=1.5, legend=Leg[m], xleg = "bottomright")})
+  title(Title[m], adj = 0, line =1, cex.main=2 )
+}
 
 dev.off()
-
 ```
 
 ### c) Figure 3
@@ -1320,6 +1322,44 @@ NEW DEC 2020:
 - Added SES.
 - Added unadjusted Rsquared, as SES for adjusted Rsquared problematic.
 
+Jan 1, 2020:
+
+- Drop SES for Adj R2
+- Drop unadjusted R2
+- Average sd across 3 x 10 replicates
+- Dodge symbols
+
+
+Function for pooling mean and sd from groups. Source: https://www.statstodo.com/CombineMeansSDs_Pgm.php
+
+```{r}
+Calc1 <- function(myDat) # myDat is matrix with 3 cols of n, mean, and SD
+{
+  m = nrow(myDat)  # number of groups
+  tn = 0
+  tx = 0
+  txx = 0
+  for(i in 1:m)
+  {
+    n = myDat[i,1]
+    mean = myDat[i,2]
+    sd = myDat[i,3]
+    x = n * mean
+    xx = sd^2*(n - 1) + x^2 / n 
+    out<-cat("grp",i," n=",n," mean=",mean," SD=", sd, " Ex=", x, " Exx=",xx, "\n")
+    tn = tn + n
+    tx = tx + x
+    txx = txx + xx
+  }
+  tmean = tx / tn
+  tsd = sqrt((txx - tx^2/tn) / (tn - 1))
+  out <- cat("Combined","n=",tn," mean=",tmean," SD=", tsd, " Ex=", tx, " Exx=",txx,"\n")
+  c(tn,tmean,tsd)
+}
+```
+
+Fig. 3 
+
 ```{r}
 Results.table <- Results.subsets.table[[3]] %>% filter(NumInd == 20)
 Results.table <- split(Results.table, Results.table$Demography)
@@ -1327,118 +1367,113 @@ Results.table <- split(Results.table, Results.table$Demography)
 #Plots.data <- list()
 Plots <- list()
 
-demo <- rep(c("IBD", "1R", "2R"), 4)
-y1 <- rep(c("Fst.RsqAdjPos", "Fst.RsqPos", "Fst.Morans.I", "Fst.I.scaled"), each=3)
-y2 <- rep(c("SES.RsqAdjPos", "SES.RsqPos", "SES.Morans.I", "SES.I.scaled"), each=3)
-yLabels <- c(expression('Adjusted R'^2), "", "", expression('R'^2), "", "", 
-             "Moran's I", "", "", "Scaled Moran's I", "", "")
-
-for(i in 1:12)
-{
-  tmp1 <- tmp2 <- Results.table[[demo[i]]]
-  tmp1 <- tmp1[ ,grep(y1[i], names(tmp1))]
-  tmp2 <- tmp2[ ,grep(y2[i], names(tmp2))]
-  names(tmp1) <- paste0("Y.", substr(names(tmp1), nchar(y1[i])+2, nchar(names(tmp1))))
-  names(tmp2) <- paste0("Y.", substr(names(tmp2), nchar(y2[i])+2, nchar(names(tmp2))))
-  
-  rm(D11, D11.SES, D11.s, D11.SES.s)
-  D11<- with(tmp1, data.frame(Comp.60=Y.drop.m / Y.90, 
-                      Meta.60=Y.drop.MEM.m / Y.90, 
-                      Meta.30=Y.30m / Y.90)) 
-  D11.SES<- with(tmp2, data.frame(Comp.60=Y.drop.m / Y.90, 
-                      Meta.60=Y.drop.MEM.m / Y.90, 
-                      Meta.30=Y.30m / Y.90)) 
-  D11<- gather(D11, "Comparison", "Y")
-  D11.SES<- gather(D11.SES, "Comparison", "Y")
-  D11.s <- groupwiseMean(Y ~ Comparison, data =D11, conf   = 0.95, digits = 3)
-  D11.s$Comparison <- factor(D11.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-  D11.SES.s <- groupwiseMean(Y ~ Comparison, data =D11.SES, conf   = 0.95, digits = 3)
-  D11.SES.s$Comparison <- factor(D11.SES.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-  #Plots.data[[i]] <- list(D11.s, D11.SES.s)
-  
-  Plots[[i]] <- ggplot(D11.s, aes(x = Comparison, y = Mean)) + ylim(-0.1,1.1) +
-     geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-     geom_point(shape = 1, size  = 2, colour="black") +
-     theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-      ggtitle(demo[i]) + xlab("") + ylab(yLabels[i]) +
-      theme(axis.text = element_text(size = 10),
-            plot.title = element_text(size=16, face="bold", hjust = 0.5),
-            axis.title.y = element_text(size=12, face="bold")) +
-     geom_point(data = D11.SES.s, aes(x = Comparison, y = Mean), colour="grey70") +
-     geom_errorbar(data = D11.SES.s, aes(ymin = Trad.lower, ymax = Trad.upper), 
-                   width = 0.05, size  = 0.5, col="grey70") + 
-     geom_hline(yintercept=1, size=0.5)
-}
-
-```
-
-```{r fig.height=8, fig.width=6}
-
-figure.3.P <- ggarrange(Plots[[1]], Plots[[2]], Plots[[3]], Plots[[4]], Plots[[5]],
-                        Plots[[6]], Plots[[7]], Plots[[8]], Plots[[9]], Plots[[10]], 
-                        Plots[[11]], Plots[[12]], ncol = 3, nrow = 4)
-figure.3.P
-
-g <- arrangeGrob(Plots[[1]], Plots[[2]], Plots[[3]], Plots[[4]], Plots[[5]],
-                        Plots[[6]], Plots[[7]], Plots[[8]], Plots[[9]], Plots[[10]], 
-                        Plots[[11]], Plots[[12]], ncol = 3, nrow = 4) 
-ggsave(file=paste0(here::here(), "/output/Figure3.test.pdf"), g, width=8.5, height=12)
-ggsave(file=paste0(here::here(), "/output/Figure3.test.jpg"), g, width=8.5, height=12)
-
-```
-
-With 9900 loci, no SES: NEED TO RUN RESULTS FOR DROP
-
-```{r}
-Results.table <- Results.subsets.table[[1]] %>% filter(NumInd == 20)
-Results.table <- split(Results.table, Results.table$Demography)
-
-#Plots.data <- list()
-Plots <- list()
-
 demo <- rep(c("IBD", "1R", "2R"), 3)
 y1 <- rep(c("Fst.RsqAdjPos", "Fst.Morans.I", "Fst.I.scaled"), each=3)
-y2 <- rep(c("SES.RsqAdjPos", "SES.Morans.I", "SES.I.scaled"), each=3)
-yLabels <- c(expression('Adjusted R'^2), "", "", "Moran's I", "", "", 
-                        "Scaled Moran's I", "", "")
+y2 <- rep(c(NA, "SES.Morans.I", "SES.I.scaled"), each=3)
+yLabels <- c(expression('Adjusted R'^2), "", "",
+             "Moran's I", "", "", "Scaled Moran's I", "", "")
 
 for(i in 1:9)
 {
   tmp1 <- tmp2 <- Results.table[[demo[i]]]
   tmp1 <- tmp1[ ,grep(y1[i], names(tmp1))]
-  #tmp2 <- tmp2[ ,grep(y2[i], names(tmp2))]
   names(tmp1) <- paste0("Y.", substr(names(tmp1), nchar(y1[i])+2, nchar(names(tmp1))))
-  #names(tmp2) <- paste0("Y.", substr(names(tmp2), nchar(y2[i])+2, nchar(names(tmp2))))
-  
-  rm(D11, D11.s)
   D11<- with(tmp1, data.frame(Comp.60=Y.drop.m / Y.90, 
                       Meta.60=Y.drop.MEM.m / Y.90, 
                       Meta.30=Y.30m / Y.90)) 
-
-  D11<- gather(D11, "Comparison", "Y")
-  D11.s <- groupwiseMean(Y ~ Comparison, data =D11, conf   = 0.95, digits = 3)
-  D11.s$Comparison <- factor(D11.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-
-  #Plots.data[[i]] <- list(D11.s, D11.SES.s)
+  # Pool standard deviation across three replicate landscapes
+  sds <- with(tmp1, data.frame(Comp.60.s=Y.drop.s / Y.90, 
+                      Meta.60.s=Y.drop.MEM.s / Y.90, 
+                      Meta.30.s=Y.30s / Y.90))
+  Pooled <- data.frame(rbind(Comp.60=Calc1(data.frame(n=10, means=D11[,1], sd=sds[,1])),
+        Meta.60=Calc1(data.frame(n=10, means=D11[,2], sd=sds[,2])),
+        Meta.30=Calc1(data.frame(n=10, means=D11[,3], sd=sds[,3]))))
+  names(Pooled) <- c("n", "Mean", "SD")
+  Pooled <- data.frame(Comparison = factor(rownames(Pooled), levels=c("Comp.60", "Meta.60", "Meta.30")), 
+                       Conf.level=0.95, Pooled)
   
-  Plots[[i]] <- ggplot(D11.s, aes(x = Comparison, y = Mean)) + ylim(0,1.1) +
-     geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-     geom_point(shape = 1, size  = 2, colour="black") +
+  # Recalculate confidence intervals
+  Dist = Pooled$Conf.level + (1 - Pooled$Conf.level)/2
+  Inty = qt(Dist, df = (Pooled$n - 1)) * Pooled$SD/sqrt(Pooled$n)
+  Pooled$Trad.lower <- Pooled$Mean - Inty
+  Pooled$Trad.upper <- Pooled$Mean + Inty
+  
+  if(is.na(y2[i])) 
+  {
+    Plots[[i]] <- ggplot(Pooled, aes(x = Comparison, y = Mean)) + ylim(0.5,1.1) +
+       geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0, size  = 0.5) +
+       geom_point(shape = 1, size  = 2, colour="black") +
+       theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+        ggtitle(demo[i]) + xlab("") + ylab(yLabels[i]) +
+        theme(axis.text = element_text(size = 10),
+              plot.title = element_text(size=16, face="bold", hjust = 0.5),
+              axis.title.y = element_text(size=12, face="bold")) +
+       geom_hline(yintercept=1, size=0.5)
+  }
+  
+  if(!is.na(y2[i])) 
+  {
+    tmp2 <- tmp2[ ,grep(y2[i], names(tmp2))]
+    names(tmp2) <- paste0("Y.", substr(names(tmp2), nchar(y2[i])+2, nchar(names(tmp2))))
+    D11.SES<- with(tmp2, data.frame(Comp.60=Y.drop.m / Y.90, 
+                      Meta.60=Y.drop.MEM.m / Y.90, 
+                      Meta.30=Y.30m / Y.90)) 
+    
+    # Pool standard deviation across three replicate landscapes
+    sds <- with(tmp2, data.frame(Comp.60.s=Y.drop.s / Y.90, 
+                      Meta.60.s=Y.drop.MEM.s / Y.90, 
+                      Meta.30.s=Y.30s / Y.90))
+    Pooled.SES <- data.frame(rbind(Comp.60=Calc1(data.frame(n=10, means=D11.SES[,1], sd=sds[,1])),
+        Meta.60=Calc1(data.frame(n=10, means=D11[,2], sd=sds[,2])),
+        Meta.30=Calc1(data.frame(n=10, means=D11[,3], sd=sds[,3]))))
+    names(Pooled.SES) <- c("n", "Mean", "SD")
+    Pooled.SES <- data.frame(Comparison = factor(rownames(Pooled.SES), 
+                                levels=c("Comp.60", "Meta.60", "Meta.30")), 
+                             Conf.level=0.95, Pooled.SES)
+  
+    # Recalculate confidence intervals
+    Dist = Pooled.SES$Conf.level + (1 - Pooled.SES$Conf.level)/2
+    Inty = qt(Dist, df = (Pooled.SES$n - 1)) * Pooled.SES$SD/sqrt(Pooled.SES$n)
+    Pooled.SES$Trad.lower <- Pooled.SES$Mean - Inty
+    Pooled.SES$Trad.upper <- Pooled.SES$Mean + Inty
+    
+    # Combine observed means and SES:
+    Pooled <- data.frame(Type=rep(c("Obs", "SES"),each=3), rbind(Pooled, Pooled.SES))
+    
+    # Group by type, dodge means and error bars:
+    Plots[[i]] <- ggplot(Pooled, aes(x = Comparison, y = Mean, group=Type, colour=Type)) + 
+         ylim(0.5,1.1) + scale_color_manual(values=c("#000000", "#999999")) + 
+     geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5,
+                   position=position_dodge(width=0.25), show.legend = F) +
+     geom_point(shape = 1, size  = 2, position=position_dodge(width=0.25), show.legend = F) +
      theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
       ggtitle(demo[i]) + xlab("") + ylab(yLabels[i]) +
       theme(axis.text = element_text(size = 10),
             plot.title = element_text(size=16, face="bold", hjust = 0.5),
-            axis.title.y = element_text(size=12, face="bold"))  
+            axis.title.y = element_text(size=12, face="bold")) +
+     geom_hline(yintercept=1, size=0.5)
+  }
 }
+
 
 figure.3.P <- ggarrange(Plots[[1]], Plots[[2]], Plots[[3]], Plots[[4]], Plots[[5]],
                         Plots[[6]], Plots[[7]], Plots[[8]], Plots[[9]], ncol = 3, nrow = 3)
-figure.3.P
+#figure.3.P
 
+g <- arrangeGrob(Plots[[1]], Plots[[2]], Plots[[3]], Plots[[4]], Plots[[5]],
+                        Plots[[6]], Plots[[7]], Plots[[8]], Plots[[9]], ncol = 3, nrow = 3) 
+ggsave(file=paste0(here::here(), "/output/Figure3.pdf"), g, width=8.5, height=9)
+ggsave(file=paste0(here::here(), "/output/Figure3.jpg"), g, width=8.5, height=9)
 ```
+
+
+
+
 =======
 
-## 8. Interaction Plots for supplementary material using the Dch as a measure for genetic distance
+## 8. Interaction Plots for supplementary material 
+
+These plots use Dch instead of pairwise Fst as a measure for genetic distance.
 
 THIS NEEDS TO BE UPDATED!
 
@@ -1448,49 +1483,50 @@ With n=90, #IND= 20 & the 9900 loci: Difference demographies in response variabe
 
 ```{r fig.height=2.5, fig.width=6}
 
-#b <- which(Results.table$NumInd == 20)
-#Results.table$Demography <- factor(Results.table$Demography, levels = c("IM", "IBD", "1R", "2R"))
+#Results.table <- readRDS(paste0(here::here(), "/output/Results.table.rds"))
+#Results.subsets.table <- readRDS(paste0(here::here(), "/output/Results.subsets.table.rds"))
+Results.table <- Results.subsets.table
 
-Sum1.p <- groupwiseMean(Fst.90 ~ Demography, data = Results.table[b,], conf   = 0.95, digits = 3)
-Pan.a.p<- ggplot(Sum1.p, aes(x = Demography, y = Mean)) + ylim(0.0,0.015) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("(a)") + xlab("Demography") + ylab("Fst") +
-    theme(axis.text = element_text(size = 12),
-          plot.title = element_text(size=16, face="bold"),
-          axis.title.x = element_text(size=12, face="bold"),
-          axis.title.y = element_text(size=12, face="bold")
-          )
+s = 1
+b <- which(Results.table[[s]]$NumInd == 20)
+Results.table[[s]]$Demography <- factor(Results.table[[s]]$Demography, 
+                                        levels = c("IM", "IBD", "1R", "2R"))
 
-Sum2.p <- groupwiseMean(Dch.RsqAdjPos.90 ~ Demography, data = Results.table[b,], conf   = 0.95, digits = 3)
-Pan.b.p<- ggplot(Sum2.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("(b)") + xlab("Demography") + ylab(expression(bold('Adjusted R'^2))) +
-    theme(axis.text = element_text(size = 12),
-          plot.title = element_text(size=16, face="bold"),
-          axis.title.x = element_text(size=12, face="bold"),
-          axis.title.y = element_text(size=12, face="bold")
-          )
+s = 1
+b <- which(Results.table[[s]]$NumInd == 20)
+Results.table[[s]]$Demography <- factor(Results.table[[s]]$Demography, 
+                                        levels = c("IM", "IBD", "1R", "2R"))
 
-Sum3.p <- groupwiseMean(Dch.Morans.I.90 ~ Demography, data = Results.table[b,], conf   = 0.95, digits = 3)
-Pan.c.p<- ggplot(Sum3.p, aes(x = Demography, y = Mean)) + ylim(-0.02,0.8) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("(c)") + xlab("Demography") + ylab("Moran's I") +
-    theme(axis.text = element_text(size = 12),
-          plot.title = element_text(size=16, face="bold"),
-          axis.title.x = element_text(size=12, face="bold"),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-figure.1.P <- ggarrange(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1)
-#figure.1.P
+Metrics <- c("Fst.90", "Dch.RsqAdjPos.90", "Dch.Morans.I.90")
+Labels <- c("Fst", expression('Adjusted R'^2), "Moran's I")
+ymin = c(0.0, -0.02, -0.02)
+ymax = c(0.02, 0.8, 0.8)
+Title <- c("(a)", "(b)", "(c)")
 
-g <- arrangeGrob(Pan.a.p, Pan.b.p, Pan.c.p, ncol = 3, nrow = 1) #generates g
- ggsave(file=paste0(here::here(), "/output/FigureS1.pdf"), g)
+Plots <- list()
+
+for(m in 1:3)
+{
+  Sum1.p <- groupwiseMean(var = Metrics[m], group = "Demography", data = Results.table[[s]][b,], 
+                          conf   = 0.95, digits = 3)
+  Plots[[m]] <- ggplot(Sum1.p, aes(x = Demography, y = Mean)) + ylim(ymin[m], ymax[m]) +
+     geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
+     geom_point(shape = 1, size  = 2) +
+     theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+      ggtitle(Title[m]) + xlab("Demography") + ylab(Labels[m]) +
+      theme(axis.text = element_text(size = 12),
+            plot.title = element_text(size=16, face="bold"),
+            axis.title.x = element_text(size=12, face="bold"),
+            axis.title.y = element_text(size=12, face="bold")
+            )
+}
+
+figure.1.P <- ggarrange(Plots[[1]], Plots[[2]], Plots[[3]], ncol = 3, nrow = 1)
+figure.1.P
+
+g <- arrangeGrob(Plots[[1]], Plots[[2]], Plots[[3]], ncol = 3, nrow = 1) #generates g
+ ggsave(file=paste0(here::here(), "/output/FigureS1.pdf"), g, width=8, height=3)
+ ggsave(file=paste0(here::here(), "/output/FigureS1.jpg"), g, width=8, height=3)
 
 ```
 
@@ -1503,61 +1539,44 @@ With n=90 and removing IM: Interaction between #Ind (20, 6) and # Loci (9900, 33
 
 loci <- c(9900, 3300, 500, 100, 50)
 
-s = 3
+Results.table <- Results.subsets.table 
 
-Results.sub.wide <- Results.table[[s]] %>% 
-  mutate(Demography = as.character(Demography), NumInd = as.character(NumInd)) %>%
-  select(Demography, NumPops, NumInd, Fst.90, Fst.90.3, Fst.90.500, Dch.RsqAdjPos.90, Dch.Morans.I.90, 
-         Dch.I.scaled.90, Dch.RsqAdjPos.90.3, Dch.Morans.I.90.3, Dch.I.scaled.90.3, 
-         Dch.RsqAdjPos.90.500, Dch.Morans.I.90.500, Dch.I.scaled.90.500)
+a <- which(Results.table[[1]]$Demography != "IM")
 
-# Convert to long format
-Results.sub.long <- data.frame(
-  Results.sub.wide %>% 
-    select(Demography, NumPops, NumInd, Fst.90, Fst.90.3, Fst.90.500) %>%
-    melt(id.vars=c("Demography", "NumPops", "NumInd")) %>% rename(Fst = value) %>% 
-    select(Demography, NumPops, NumInd, Fst),
-  Results.sub.wide %>% 
-    select(Demography, NumPops, NumInd, Dch.RsqAdjPos.90, Dch.RsqAdjPos.90.3, Dch.RsqAdjPos.90.500) %>%
-    melt(id.vars=c("Demography", "NumPops", "NumInd")) %>% rename(Adj.Rsqr.Pos = value) %>% 
-    select(Adj.Rsqr.Pos),
-  Results.sub.wide %>% 
-    select(Demography, NumPops, NumInd, Dch.Morans.I.90, Dch.Morans.I.90.3, Dch.Morans.I.90.500) %>%
-    melt(id.vars=c("Demography", "NumPops", "NumInd")) %>% rename(Morans.I = value) %>% 
-    select(Morans.I),
-  Results.sub.wide %>% 
-    select(Demography, NumPops, NumInd, Dch.I.scaled.90, Dch.I.scaled.90.3, Dch.I.scaled.90.500) %>%
-    melt(id.vars=c("Demography", "NumPops", "NumInd")) %>% rename(I.scaled = value) %>% 
-    select(I.scaled))
+tmp <- lapply(1:length(Results.table), function(s) 
+  data.frame(NumLoci=rep(loci[s],length(a)), Results.table[[s]] %>% 
+             mutate(Demography = as.character(Demography), 
+                    NumInd = as.character(NumInd)) %>%
+             filter(Demography!= "IM") %>%   
+             select(Demography, NumPops, NumInd, Fst.90, Dch.RsqAdjPos.90, 
+                    Dch.Morans.I.90, Dch.I.scaled.90)))
 
-# Add number of loci, drop IM
-Results.sub.long <- Results.sub.long %>% mutate(NumLoci = rep(c(9900, 3300, 500), each=24)) %>% 
-  mutate(NumLoci = factor(NumLoci, levels = c("500", "3300", "9900"))) %>% 
-  filter(Demography != "IM")
+Results.sub.long <- Reduce(rbind, tmp)
+Results.sub.long <- Results.sub.long %>% 
+            mutate(NumLoci = factor(NumLoci, levels = c("50", "100", "500", "3300", "9900"))) %>%
+            mutate(NumInd = factor(NumInd, levels = c("20", "6")))
+names(Results.sub.long)[5:8] <- c("Fst", "Adj.Rsqr.Pos", "Morans.I", "I.scaled")
 
-pdf(file = paste0(here::here(), "/output/FigureS2.pdf"), width=8, height=3.5)
+
+pdf(file = paste0(here::here(), "/output/FigureS2.pdf"), width=8, height=3)
 
 par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
-  with(Results.sub.long, {interaction.plot(NumInd, NumLoci, Fst, 
-                                             col=c("grey1","grey20","grey50"), 
-                                             ylab=" mean Fst", ylim=c(0.0,0.015), lwd= 3, 
-                                             cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, 
-                                             xleg = "bottomright")})
-    title("(a)", adj = 0, line =1, cex.main=2 )
-    
-  with(Results.sub.long, {interaction.plot(NumInd, NumLoci, Adj.Rsqr.Pos, 
-                                                  col=c("grey1","grey20","grey50"), 
-                                                  ylab=expression("mean adjusted R"^2), ylim=c(0.0,0.6), 
-                                                  lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, 
-                                                  legend=FALSE)})
-  title("(b)", adj = 0, line =1, cex.main=2 )
-  
-  with(Results.sub.long, {interaction.plot(NumInd, NumLoci, Morans.I, 
-                                                  col=c("grey1","grey20","grey50"), 
-                                                  ylab="mean Moran's I", ylim=c(0.0,0.6), 
-                                                  lwd= 3, cex.lab=1.5, cex.axis=1.5, cex.sub=1.5, 
-                                                  legend=FALSE)})
-  title("(c)", adj = 0, line =1, cex.main=2 )
+
+Metrics <- c("Fst", "Adj.Rsqr.Pos", "Morans.I")
+Labels <- c("Mean Fst", expression("Mean adjusted R"^2), "Mean Moran's I")
+ymax <- c(0.015, 0.6, 0.6)
+Leg <- c(TRUE, FALSE, FALSE)
+Title <- c("(a)", "(b)", "(c)")
+
+for(m in 1:3)
+{
+  with(Results.sub.long, {interaction.plot(NumInd, NumLoci, get(Metrics[m]), 
+                            col=c("grey70","grey50","grey30", "grey20", "grey1"), 
+                            ylab= Labels[m], ylim=c(0.0, ymax[m]), lwd= 1.5, 
+                            xlab="Number of individuals", cex.lab=1.5, cex.axis=1.5, 
+                            cex.sub=1.5, legend=Leg[m], xleg = "bottomright")})
+  title(Title[m], adj = 0, line =1, cex.main=2 )
+}
 
 dev.off()
 
@@ -1569,165 +1588,65 @@ Multipanel fig. one figure for each demography all on the same scale. boxplots (
 
 Respo= Adj R^2 & MI & scaled MI. (x axis = 60 refitting, missing values, 30 refitting)... show variability as proportion (divide each value by the value of the 90)
 
+Calculate pooled means and sdev among 3 x 10 replicates.
+
 ```{r fig.height=6, fig.width=6}
 
-# Dch Adjusted Rsq.
+Results.table <- Results.subsets.table[[3]] %>% filter(NumInd == 20)
+Results.table <- split(Results.table, Results.table$Demography)
 
-D11<- with(Results.table %>% filter(Demography == "IBD" & NumInd == 20), 
-           data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90, 
-                      Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90, 
-                      Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90)) 
-D11<- gather(D11, "Comparison", "Dch.Rsq")
-D11.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D11, conf   = 0.95, digits = 3)
-D11.s$Comparison <- factor(D11.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D11.a.s<- ggplot(D11.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("IBD") + xlab("") + ylab(expression(bold('Adjusted R'^2))) +
-    theme(axis.text = element_text(size = 10),
-          plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.y = element_text(size=12, face="bold")
-          )
+#Plots.data <- list()
+Plots <- list()
 
-D22<- with(Results.table %>% filter(Demography == "1R" & NumInd == 20), 
-           data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90, 
-                      Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90, 
-                      Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90)) 
-D22<- gather(D22, "Comparison", "Dch.Rsq")
-D22.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D22, conf   = 0.95, digits = 3)
-D22.s$Comparison <- factor(D22.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D22.a.s<- ggplot(D22.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("1R") + xlab("") + ylab("") +
-    theme(axis.text = element_text(size = 10),
-          plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.y = element_text(size=12, face="bold")
-          )
+demo <- rep(c("IBD", "1R", "2R"), 3)
+y1 <- rep(c("Dch.RsqAdjPos", "Dch.Morans.I", "Dch.I.scaled"), each=3)
+yLabels <- c(expression('Adjusted R'^2), "", "",
+             "Moran's I", "", "", "Scaled Moran's I", "", "")
 
-D33<- with(Results.table %>% filter(Demography == "2R" & NumInd == 20), 
-           data.frame(Comp.60=Dch.RsqAdjPos.drop.m / Dch.RsqAdjPos.90, 
-                      Meta.60=Dch.RsqAdjPos.drop.MEM.m / Dch.RsqAdjPos.90, 
-                      Meta.30=Dch.RsqAdjPos.30.m / Dch.RsqAdjPos.90)) 
-D33<- gather(D33, "Comparison", "Dch.Rsq")
-D33.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D33, conf   = 0.95, digits = 3)
-D33.s$Comparison <- factor(D33.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D33.a.s<- ggplot(D33.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    ggtitle("2R") + xlab("") + ylab("") +
-    theme(axis.text = element_text(size = 10),
-          plot.title = element_text(size=16, face="bold", hjust = 0.5),
-          axis.title.y = element_text(size=12, face="bold")
-          )
+for(i in 1:9)
+{
+  tmp1 <- Results.table[[demo[i]]]
+  tmp1 <- tmp1[ ,grep(y1[i], names(tmp1))]
+  names(tmp1) <- paste0("Y.", substr(names(tmp1), nchar(y1[i])+2, nchar(names(tmp1))))
+  D11<- with(tmp1, data.frame(Comp.60=Y.drop.m / Y.90, 
+                      Meta.60=Y.drop.MEM.m / Y.90, 
+                      Meta.30=Y.30m / Y.90)) 
+  
+  # Pool standard deviation across three replicate landscapes
+  sds <- with(tmp1, data.frame(Comp.60.s=Y.drop.s / Y.90, 
+                      Meta.60.s=Y.drop.MEM.s / Y.90, 
+                      Meta.30.s=Y.30s / Y.90))
+  Pooled <- data.frame(rbind(Comp.60=Calc1(data.frame(n=10, means=D11[,1], sd=sds[,1])),
+        Meta.60=Calc1(data.frame(n=10, means=D11[,2], sd=sds[,2])),
+        Meta.30=Calc1(data.frame(n=10, means=D11[,3], sd=sds[,3]))))
+  names(Pooled) <- c("n", "Mean", "SD")
+  Pooled <- data.frame(Comparison = factor(rownames(Pooled), levels=c("Comp.60", "Meta.60", "Meta.30")), 
+                       Conf.level=0.95, Pooled)
+  
+  # Recalculate confidence intervals
+  Dist = Pooled$Conf.level + (1 - Pooled$Conf.level)/2
+  Inty = qt(Dist, df = (Pooled$n - 1)) * Pooled$SD/sqrt(Pooled$n)
+  Pooled$Trad.lower <- Pooled$Mean - Inty
+  Pooled$Trad.upper <- Pooled$Mean + Inty
+  
+  Plots[[i]] <- ggplot(Pooled, aes(x = Comparison, y = Mean)) + ylim(0.5,1.1) +
+     geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0, size  = 0.5) +
+     geom_point(shape = 1, size  = 2, colour="black") +
+     theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+      ggtitle(demo[i]) + xlab("") + ylab(yLabels[i]) +
+      theme(axis.text = element_text(size = 10),
+            plot.title = element_text(size=16, face="bold", hjust = 0.5),
+            axis.title.y = element_text(size=12, face="bold")) +
+     geom_hline(yintercept=1, size=0.5)
+}
 
+figure.3.P <- ggarrange(Plots[[1]], Plots[[2]], Plots[[3]], Plots[[4]], Plots[[5]],
+                        Plots[[6]], Plots[[7]], Plots[[8]], Plots[[9]], ncol = 3, nrow = 3)
+figure.3.P
 
-D44<- with(Results.table %>% filter(Demography == "IBD" & NumInd == 20),
-           data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90, 
-                      Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90, 
-                      Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90)) 
-D44<- gather(D44, "Comparison", "Dch.Rsq")
-D44.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D44, conf   = 0.95, digits = 3)
-D44.s$Comparison <- factor(D44.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D44.a.s<- ggplot(D44.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("") + ylab("Moran's I") +
-    theme(axis.text = element_text(size = 10),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-
-D55<- with(Results.table %>% filter(Demography == "1R" & NumInd == 20), 
-           data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90, 
-                      Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90, 
-                      Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90)) 
-D55<- gather(D55, "Comparison", "Dch.Rsq")
-D55.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D55, conf   = 0.95, digits = 3)
-D55.s$Comparison <- factor(D55.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D55.a.s<- ggplot(D55.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("") + ylab("") +
-    theme(axis.text = element_text(size = 10),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-
-D66<- with(Results.table %>% filter(Demography == "2R" & NumInd == 20), 
-           data.frame(Comp.60=Dch.Morans.I.drop.m / Dch.Morans.I.90, 
-                      Meta.60=Dch.Morans.I.drop.MEM.m / Dch.Morans.I.90, 
-                      Meta.30=Dch.Morans.I.30.m / Dch.Morans.I.90)) 
-D66<- gather(D66, "Comparison", "Dch.Rsq")
-D66.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D66, conf   = 0.95, digits = 3)
-D66.s$Comparison <- factor(D66.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D66.a.s<- ggplot(D66.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("") + ylab("") +
-    theme(axis.text = element_text(size = 10),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-
-# Scaled Moran's I
-
-D77<- with(Results.table %>% filter(Demography == "IBD" & NumInd == 20), 
-           data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,
-                      Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90, 
-                      Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90)) 
-D77<- gather(D77, "Comparison", "Dch.Rsq")
-D77.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D77, conf   = 0.95, digits = 3)
-D77.s$Comparison <- factor(D77.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D77.a.s<- ggplot(D77.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("") + ylab("Scaled Moran's I") +
-    theme(axis.text = element_text(size = 10),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-
-D88<- with(Results.table %>% filter(Demography == "1R" & NumInd == 20), 
-           data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,  
-                      Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90, 
-                      Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90)) 
-D88<- gather(D88, "Comparison", "Dch.Rsq")
-D88.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D88, conf   = 0.95, digits = 3)
-D88.s$Comparison <- factor(D88.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D88.a.s<- ggplot(D88.s, aes(x = Comparison, y = Mean)) + ylim(0,1.0) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-   xlab("") + ylab("") +
-    theme(axis.text = element_text(size = 10),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-
-D99<- with(Results.table %>% filter(Demography == "2R" & NumInd == 20), 
-           data.frame(Comp.60=Dch.I.scaled.drop.m / Dch.I.scaled.90,  
-                      Meta.60=Dch.I.scaled.drop.MEM.m / Dch.I.scaled.90, 
-                      Meta.30=Dch.I.scaled.30.m / Dch.I.scaled.90)) 
-D99<- gather(D99, "Comparison", "Dch.Rsq")
-D99.s <- groupwiseMean(Dch.Rsq ~ Comparison, data =D99, conf   = 0.95, digits = 3)
-D99.s$Comparison <- factor(D99.s$Comparison, levels = c("Comp.60", "Meta.60", "Meta.30"))
-D99.a.s<- ggplot(D99.s, aes(x = Comparison, y = Mean)) + ylim(0,1.02) +
-   geom_errorbar(aes(ymin = Trad.lower, ymax = Trad.upper), width = 0.05, size  = 0.5) +
-   geom_point(shape = 1, size  = 2) +
-   theme_bw() + theme (panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-    xlab("") + ylab("") +
-    theme(axis.text = element_text(size = 10),
-          axis.title.y = element_text(size=12, face="bold")
-          )
-
-figure.3.P <- ggarrange(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3)
-#figure.3.P
-
-g <- arrangeGrob(D11.a.s, D22.a.s, D33.a.s, D44.a.s, D55.a.s, D66.a.s ,D77.a.s, D88.a.s, D99.a.s, ncol = 3, nrow = 3) 
-ggsave(file=paste0(here::here(), "/output/FigureS3.pdf"), g)
+g <- arrangeGrob(Plots[[1]], Plots[[2]], Plots[[3]], Plots[[4]], Plots[[5]],
+                        Plots[[6]], Plots[[7]], Plots[[8]], Plots[[9]], ncol = 3, nrow = 3) 
+ggsave(file=paste0(here::here(), "/output/FigureS3.pdf"), g, width=8.5, height=9)
 
 ```
 
