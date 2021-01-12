@@ -1203,6 +1203,7 @@ library("ggplot2")
 library("gridExtra")
 library("reshape2")
 library("tidyr")
+library("memgene")
 
 source(paste0(here::here(), "/output/InteractionPlotLegend.R"))
 ```
@@ -1240,61 +1241,55 @@ for(j in 1:length(Map.sites))
 
 Figure 1
 
-```{r fig.height=12, fig.width=6}
+```{r Figure1, fig.height=12, fig.width=6}
 
 pdf(paste0(here::here(), "/output/Figure1.pdf"), width=5.5, height=12)
 par(mfrow=c(4,2), mai=c(0.3,0.3,0.5,0.2))
 
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[1]]$vectorsMEM[, Res.mem[[1]]$Positive$selectedMEM[1]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[1]]$analysis$memgene[, 1], add.plot=TRUE)
 mtext(bquote("a)  Island model: Adj." ~ R^2 == 
-               .((round(max(0, Res.mem[[1]]$analysis$RsqAdj),2)))), 
+               .((round(max(0, Res.mem[[1]]$AdjRsq.12),2)))), 
       side=3, adj=0, line=1)
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[1]]$vectorsMEM[, Res.mem[[1]]$Positive$selectedMEM[2]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[1]]$analysis$memgene[, 2], add.plot=TRUE)
 
 
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[2]]$vectorsMEM[, Res.mem[[2]]$Positive$selectedMEM[1]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[2]]$analysis$memgene[, 1], add.plot=TRUE)
 mtext(bquote("b)  Isolation by distance: Adj." ~ R^2 == 
-               .((round(Res.mem[[2]]$analysis$RsqAdj,2)))), 
+               .((round(
+                 Res.mem[[2]]$AdjRsq.12,2)))), 
       side=3, adj=0, line=1)
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[2]]$vectorsMEM[, Res.mem[[2]]$Positive$selectedMEM[2]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[2]]$analysis$memgene[, 2], add.plot=TRUE)
 
 
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[3]]$vectorsMEM[, Res.mem[[3]]$Positive$selectedMEM[1]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[3]]$analysis$memgene[, 1], add.plot=TRUE)
 mtext(bquote("c)  One refugium: Adj." ~ R^2 == 
-               .((round(Res.mem[[3]]$analysis$RsqAdj,2)))), 
+               .((round(Res.mem[[3]]$AdjRsq.12,2)))), 
       side=3, adj=0, line=1)
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[3]]$vectorsMEM[, Res.mem[[3]]$Positive$selectedMEM[2]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[3]]$analysis$memgene[, 2], add.plot=TRUE)
 
 
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[4]]$vectorsMEM[, Res.mem[[4]]$Positive$selectedMEM[1]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[4]]$analysis$memgene[, 1], add.plot=TRUE)
 mtext(bquote("d)  Two refugia: Adj." ~ R^2 == 
-               .((round(Res.mem[[4]]$analysis$RsqAdj,2)))), 
+               .((round(Res.mem[[4]]$AdjRsq.12,2)))), 
       side=3, adj=0, line=1)
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
-mgMap(coord, Res.mem[[4]]$vectorsMEM[, Res.mem[[4]]$Positive$selectedMEM[2]], 
-      add.plot=TRUE)
+mgMap(coord, Res.mem[[4]]$analysis$memgene[, 2], add.plot=TRUE)
+
 
 par(mfrow=c(1,1))
 dev.off()
