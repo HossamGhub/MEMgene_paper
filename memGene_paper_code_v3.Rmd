@@ -1243,8 +1243,10 @@ Figure 1
 
 ```{r Figure1, fig.height=12, fig.width=6}
 
-pdf(paste0(here::here(), "/output/Figure1.pdf"), width=5.5, height=12)
+#pdf(paste0(here::here(), "/output/Figure1.pdf"), width=5.5, height=12)
+jpeg(paste0(here::here(), "/output/Figure1.jpg"), width=5.5, height=12, units="in", res=300)
 par(mfrow=c(4,2), mai=c(0.3,0.3,0.5,0.2))
+#par(mfrow=c(4,2), mai=c(0.1,0.1,0.2,0.05))
 
 plot(coord[,1], coord[,2], type="n", xlab="", ylab="", axes=FALSE)
 box()
@@ -1335,6 +1337,7 @@ for(m in 1:3)
 
 g <- arrangeGrob(Plots[[1]], Plots[[2]], Plots[[3]], ncol = 3, nrow = 1) #generates g
  ggsave(file=paste0(here::here(), "/output/Figure2.pdf"), g, width=8, height=3)
+ ggsave(file=paste0(here::here(), "/output/Figure2.jpg"), g, width=8, height=3)
 
 ```
 
@@ -1364,7 +1367,8 @@ Results.sub.long <- Results.sub.long %>%
             mutate(NumInd = factor(NumInd, levels = c("20", "6")))
 names(Results.sub.long)[5:8] <- c("Fst", "Adj.Rsqr.Pos", "Morans.I", "I.scaled")
 
-pdf(file = paste0(here::here(), "/output/Figure3.pdf"), width=8, height=3)
+#pdf(file = paste0(here::here(), "/output/Figure3.pdf"), width=8, height=3)
+jpeg(paste0(here::here(), "/output/Figure3.jpg"), width=8, height=3, units="in", res=300)
 par(mfcol=c(1,3), mar = c(5, 5, 3, 1))
 
 Metrics <- c("Fst", "Adj.Rsqr.Pos", "Morans.I")
@@ -1519,6 +1523,7 @@ for(i in 1:9)
 g <- arrangeGrob(Plots[[1]], Plots[[2]], Plots[[3]], Plots[[4]], Plots[[5]],
                         Plots[[6]], Plots[[7]], Plots[[8]], Plots[[9]], ncol = 3, nrow = 3) 
 ggsave(file=paste0(here::here(), "/output/Figure4.pdf"), g, width=8.5, height=9)
+ggsave(file=paste0(here::here(), "/output/Figure4.jpg"), g, width=8.5, height=9)
 ```
 
 
